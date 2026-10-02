@@ -306,6 +306,31 @@
     return { complete, depth, need, plans: lastLayer };
   }
 
+  // 한 손 더 내다보기: 상위 K개 수순마다 다음 손패 M개를 표본으로 뽑아(후보 간 같은 표본) 다음 손 최선값의 평균으로 다시 순위를 매긴다.
+  // look: { K, M, beam }, R: 표본용 난수
+  function planLook(state, opts, look, R) {
+    const res = plan(state, opts);
+    if (!res.complete || res.plans.length < 2) return res;
+    const cand = [], seen = new Set();
+    for (const p of res.plans) { const key = rowsKey(p.rows, 0) + p.dot + ':' + p.reroll; if (seen.has(key)) continue; seen.add(key); cand.push(p); if (cand.length >= look.K) break; }
+    if (cand.length < 2) return res;
+    const hands = [];
+    for (let m = 0; m < look.M; m++) hands.push([drawPiece(state.lines, R), drawPiece(state.lines, R), drawPiece(state.lines, R)]);
+    const o2 = { w: opts.w, vf: opts.vf, beam: look.beam, finalK: look.beam * 2, maxDots: opts.maxDots };
+    for (const c of cand) {
+      let sum = 0;
+      for (const h of hands) {
+        const st = { rows: c.rows, icons: c.icons, dot: c.dot, reroll: c.reroll, lines: c.lines, hand: h, gravity: state.gravity };
+        const r2 = plan(st, o2);
+        sum += r2.plans.length ? r2.plans[0].v : (opts.vf ? opts.vf.full(c) : fullEval(c, opts.w)) - 15000;
+      }
+      c.look = c.gain + sum / hands.length;
+    }
+    vfCur = opts.vf || null;
+    cand.sort((a, b) => b.look - a.look);
+    return { complete: true, depth: res.depth, need: res.need, plans: cand };
+  }
+
   // 첫 수가 서로 다른 후보 k개 + 각 후보의 최선 후속 수순
   function diversePlans(state, opts, k) {
     const w = opts.w || WEIGHTS, beam = opts.beam || 12;
@@ -361,7 +386,7 @@
   function playHand(st, R, opts) {
     for (let guard = 0; guard < 30; guard++) {
       if (st.hand.every(h => h < 0)) return true;
-      const res = plan(st, opts);
+      const res = opts.look ? planLook(st, opts, opts.look, opts.lookR || R) : plan(st, opts);
       if (res.complete && res.plans.length) {
         applyPlan(st, res.plans[0], R);
         return true;
@@ -398,7 +423,7 @@
 
   const api = { W, H, FULL, POP, PIECE_DEFS, PIECES, NP, PROB, WKEYS, get WEIGHTS() { return WEIGHTS; }, setWeights(w) { WEIGHTS = Object.assign({}, WEIGHTS, w); },
     makeProbTable, setFinalRatio, stageOf, rng, drawPiece, fits, anyFit, countFit, clearRows, lineScore, newState, cloneState, placePiece, placeDot,
-    maybeSpawn, quickEval, fitEval, fullEval, plan, diversePlans, rescue, fillHand, playHand, applyStep, applyPlan, simulate };
+    maybeSpawn, quickEval, fitEval, fullEval, plan, planLook, diversePlans, rescue, fillHand, playHand, applyStep, applyPlan, simulate };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.MoaCore = api;
 })(typeof self !== 'undefined' ? self : this);

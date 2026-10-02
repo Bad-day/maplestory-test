@@ -9,6 +9,7 @@ function tablesFrom(sab) { return { T: sab.T.map(b => new Float32Array(b)), L: n
 
 // 한 수 고르기: 1수(조각 1개) 탐욕, 상위 K개만 배치가능 평가 추가
 const K = 8;
+const GAMMA = +process.env.TD_GAMMA || 1; // 조각 1개당 할인율 (1 = 할인 없음)
 const topRows = Array.from({ length: K }, () => new Int32Array(16));
 function choose(st, T) {
   const L = T.L; let n = 0;
@@ -67,7 +68,7 @@ function playGame(T, seed, alpha, alphaLin, learn) {
     }
     if (!e) break;
     const r = (st.score - prevScore) + e.reward;
-    update(r / 100 + e.V);
+    update(r / 100 + GAMMA * e.V);
     C.placePiece(st, e.s, e.vi, e.x, e.y);
     C.maybeSpawn(st, R);
     prevScore = st.score;
@@ -91,7 +92,7 @@ function playGamePlan(T, seed, alpha, alphaLin, learn, beam) {
     return { rows: st.rows.slice(), f1, f2, V: L[0] + V.lutSum(T, n.rows) + L[1] * f1 + L[2] * f2 }; };
   const step = () => {
     const cur = valueNow(); const r = (st.score - prevScore) / 100;
-    if (prev && learn) { let d = r + cur.V - prev.V; if (d > 200) d = 200; else if (d < -200) d = -200; V.lutAddNorm(T, prev.rows, d, alpha); L[0] += alphaLin * d; }
+    if (prev && learn) { let d = r + GAMMA * cur.V - prev.V; if (d > 200) d = 200; else if (d < -200) d = -200; V.lutAddNorm(T, prev.rows, d, alpha); L[0] += alphaLin * d; }
     prev = cur; prevScore = st.score;
   };
   let alive = true;
@@ -107,7 +108,7 @@ function playGamePlan(T, seed, alpha, alphaLin, learn, beam) {
   return { score: st.score, lines: st.lines };
 }
 
-if (!isMainThread) {
+if (!isMainThread && require.main === module) {
   const T = tablesFrom(workerData.sab);
   const A = new Float32Array(workerData.sab.A);
   const { alphaLin, learn } = workerData;
@@ -124,7 +125,7 @@ if (isMainThread && require.main === module) {
   const T = tablesFrom(sab); T.L.set([0, 1, 1]); const A = new Float32Array(sab.A); A[0] = alpha;
   let games0 = 0;
   if (resume && fs.existsSync(resume)) { const o = load(resume); o.T.forEach((t, i) => T.T[i].set(t)); T.L.set(o.L); games0 = o.games; }
-  const nw = 2, ws = [];
+  const nw = +process.env.TD_THREADS || 2, ws = [];
   for (let i = 0; i < nw; i++) ws.push(new Worker(__filename, { workerData: { sab, alpha, alphaLin: 0.0002, learn, beam, seed: (Date.now() % 1e9) + i * 1e7 } }));
   const HN = beam ? 200 : 400; const CUR = 'td2.bin', BEST = 'td2_best.bin';
   const hist = []; let games = 0, t0 = Date.now(), lastLog = t0, lastSave = t0, best = 0, sinceBest = 0, restores = 0;
