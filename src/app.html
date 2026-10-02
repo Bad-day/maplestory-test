@@ -1,0 +1,757 @@
+<title>한글 모아모아 수읽기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* 레이아웃: 좌 기보판(10×16) / 우 조각·상태·AI 추천. 사용자가 지정한 남색+청록 판 톤의 단일 다크 테마 */
+:root {
+  color-scheme: dark;
+  --bg: #0b1322; --panel: #111c31; --panel2: #16233d; --line: #243659; --line2: #2f4570;
+  --fg: #e3ebf8; --muted: #8b9dbb; --faint: #5c6f91;
+  --board: #0e3f52; --cell: #155166; --cell-line: #1f6479; --filled: #9fb3cc;
+  --accent: #6ad8f2; --accent-ink: #062431;
+  --c-blue: #4b95f3; --c-red: #f06275; --c-green: #46d17f; --c-yellow: #f6c94f; --c-gray: #9fb3cc;
+  --good: #46d17f; --warn: #f6c94f; --bad: #f06275;
+  --f-display: "Do Hyeon", "IBM Plex Sans KR", sans-serif;
+  --f-body: "IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 14px; line-height: 1.5; padding: 16px; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:focus-visible, input:focus-visible, select:focus-visible, .cell:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 14px; }
+.top h1 { font-family: var(--f-display); font-weight: 400; font-size: 28px; margin: 0; letter-spacing: .5px; }
+.top .crumb { color: var(--muted); font-size: 13px; }
+.wrap { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1280px; }
+@media (max-width: 920px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
+.panel h2 { font-size: 15px; margin: 0 0 10px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.panel h2 small { font-weight: 400; color: var(--muted); font-size: 12px; }
+.stack { display: grid; gap: 14px; min-width: 0; }
+
+/* 보드 */
+.board { display: grid; grid-template-columns: 18px repeat(10, minmax(0, 1fr)); gap: 3px; padding: 6px 6px 6px 2px; background: var(--board); border-radius: 10px; touch-action: none; user-select: none; -webkit-user-select: none; max-width: 470px; }
+.ax { font: 600 10.5px var(--f-mono); color: color-mix(in srgb, var(--fg) 45%, transparent); display: flex; align-items: center; justify-content: center; }
+.cell { aspect-ratio: 1; background: var(--cell); border-radius: 5px; position: relative; box-shadow: inset 0 0 0 1px var(--cell-line); display: flex; align-items: center; justify-content: center; font: 700 13px var(--f-mono); }
+.cell.f { box-shadow: inset 0 -3px 0 rgba(0,0,0,.25); }
+.cell.c1 { background: var(--c-blue); } .cell.c2 { background: var(--c-red); } .cell.c3 { background: var(--c-green); } .cell.c4 { background: var(--c-yellow); } .cell.c5 { background: var(--c-gray); }
+.cell > .no { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font: 700 clamp(11px, 2.6vw, 15px) var(--f-mono); color: #0b1322; z-index: 1; }
+.cell .ic { position: absolute; inset: 18%; border-radius: 50%; display: flex; align-items: center; justify-content: center; font: 700 10px var(--f-body); color: #fff; border: 2px solid rgba(255,255,255,.85); }
+.cell .ic.t0 { background: #2f7fe0; } .cell .ic.t1 { background: #9b56e8; }
+.cell.pv { box-shadow: inset 0 0 0 2px var(--accent); background: color-mix(in srgb, var(--accent) 35%, var(--cell)); }
+.cell.pv.bad { box-shadow: inset 0 0 0 2px var(--bad); background: color-mix(in srgb, var(--bad) 35%, var(--cell)); }
+.cell.rec { color: #0b1322; background: var(--rc); box-shadow: inset 0 0 0 2px #fff; }
+.cell.recold { background: var(--rc); opacity: .6; }
+.cell.rec.reuse { background: linear-gradient(135deg, var(--c-gray) 0 38%, var(--rc) 38% 100%); }
+.cell > .no { white-space: nowrap; letter-spacing: -0.5px; }
+.ax.clr { color: var(--warn); text-decoration: line-through; }
+.cell.recold > .no { color: #0b1322; font-size: 11px; }
+.cell.clr::after { content: ""; position: absolute; inset: -2px; border-radius: 6px; border: 2px dashed var(--warn); pointer-events: none; }
+.boardtools { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.seg { display: inline-flex; background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 3px; gap: 3px; flex-wrap: wrap; }
+.seg button { background: transparent; border: 0; border-radius: 6px; padding: 5px 9px; color: var(--muted); font-size: 13px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn { background: var(--panel2); border: 1px solid var(--line2); border-radius: 8px; padding: 6px 11px; font-size: 13px; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.btn:disabled { opacity: .45; cursor: default; }
+.hint { color: var(--muted); font-size: 12.5px; margin-top: 8px; min-height: 19px; }
+.hint b { color: var(--fg); }
+
+/* 상태 */
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); gap: 8px; }
+.stat { background: var(--panel2); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; display: grid; gap: 2px; }
+.stat label { color: var(--muted); font-size: 11.5px; }
+.stat input { width: 100%; background: transparent; border: 0; font: 600 16px var(--f-mono); padding: 0; font-variant-numeric: tabular-nums; }
+.stat .sub { font-size: 11px; color: var(--accent); }
+
+/* 손패 */
+.hand { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.slot { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px; display: grid; gap: 6px; justify-items: center; text-align: center; min-height: 128px; }
+.slot[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.slot .t { font-size: 12px; color: var(--muted); }
+.slot .t b { color: var(--fg); }
+.slot.empty .t b { color: var(--faint); }
+.mini { display: grid; gap: 2px; }
+.mini i { width: 11px; height: 11px; border-radius: 3px; display: block; }
+.slot .acts { display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.slot .acts button { font-size: 11.5px; padding: 3px 7px; border-radius: 6px; background: var(--bg); border: 1px solid var(--line2); }
+.palette { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 10px; }
+@media (max-width: 480px) { .palette { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.pal { background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 6px 4px; display: grid; justify-items: center; gap: 5px; min-height: 92px; align-content: start; }
+.pal:hover { border-color: var(--accent); }
+.pal .n { font-size: 11px; color: var(--muted); }
+.pal .n b { color: var(--fg); font-family: var(--f-display); font-weight: 400; font-size: 14px; margin-left: 3px; }
+.pal .mini i { width: 8px; height: 8px; border-radius: 2px; }
+.pal .pr { font: 10px var(--f-mono); color: var(--faint); }
+
+/* AI */
+.ai-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.prog { font: 12px var(--f-mono); color: var(--muted); }
+.bar { height: 4px; background: var(--panel2); border-radius: 4px; overflow: hidden; margin: 8px 0 10px; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s; }
+.advice { border-radius: 9px; padding: 8px 11px; font-size: 13px; margin-bottom: 10px; border: 1px solid; }
+.advice.warn { border-color: color-mix(in srgb, var(--warn) 55%, transparent); background: color-mix(in srgb, var(--warn) 10%, transparent); }
+.advice.bad { border-color: color-mix(in srgb, var(--bad) 55%, transparent); background: color-mix(in srgb, var(--bad) 10%, transparent); }
+.advice.info { border-color: var(--line2); background: var(--panel2); color: var(--muted); }
+.recs { display: grid; gap: 8px; }
+.rec { background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; gap: 10px; align-items: center; text-align: left; width: 100%; }
+.rec[aria-pressed="true"] { border-color: var(--accent); }
+.rec .rk { font-family: var(--f-display); font-size: 22px; color: var(--muted); text-align: center; }
+.rec[aria-pressed="true"] .rk { color: var(--accent); }
+.rec .seq { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; min-width: 0; }
+.st { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.st .num { width: 17px; height: 17px; border-radius: 50%; background: var(--fg); color: var(--bg); font: 700 10.5px var(--f-mono); display: inline-flex; align-items: center; justify-content: center; }
+.st .mini i { width: 7px; height: 7px; border-radius: 2px; }
+.st .pos { font-family: var(--f-mono); color: var(--muted); font-size: 11.5px; }
+.st .cl { color: var(--warn); font-weight: 600; }
+.rec .val { text-align: right; font-variant-numeric: tabular-nums; }
+.rec .val b { font: 600 15px var(--f-mono); display: block; }
+.rec .val span { font-size: 11px; color: var(--muted); display: block; white-space: nowrap; }
+.surv { display: inline-block; padding: 0 6px; border-radius: 9px; font-size: 10.5px; font-weight: 600; }
+.surv.g { background: color-mix(in srgb, var(--good) 22%, transparent); color: var(--good); }
+.surv.w { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }
+.surv.b { background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad); }
+.recbar { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; }
+.recbar .spacer { flex: 1; }
+.empty-note { color: var(--muted); font-size: 13px; padding: 14px; text-align: center; border: 1px dashed var(--line2); border-radius: 10px; }
+details.set { margin-top: 2px; }
+details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+.setgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin-top: 10px; }
+.setgrid label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.setgrid input[type=number], .setgrid select { background: var(--bg); border: 1px solid var(--line2); border-radius: 7px; padding: 5px 8px; color: var(--fg); }
+.foot { color: var(--faint); font-size: 12px; margin-top: 14px; max-width: 1280px; line-height: 1.6; }
+.foot b { color: var(--muted); font-weight: 600; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
+.toast.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<div class="top">
+  <h1>한글 모아모아 수읽기</h1>
+  <span class="crumb">10×16 판 · 19종 조각 · 3개 손패 · 회전·반전 · 가로줄만 제거 · 몬테카를로 수읽기</span>
+</div>
+
+<div class="wrap">
+  <section class="panel">
+    <h2>기보판 <small id="modeHint">칸을 눌러 현재 게임판을 옮겨 적으세요</small></h2>
+    <div class="board" id="board" aria-label="게임판 10열 16행"></div>
+    <div class="boardtools">
+      <div class="seg" role="group" aria-label="입력 방식">
+        <button id="m-paint" aria-pressed="true">칸 칠하기</button>
+        <button id="m-place" aria-pressed="false">조각 놓기</button>
+        <button id="m-icon0" aria-pressed="false">점찍기 아이콘</button>
+        <button id="m-icon1" aria-pressed="false">바꿔뽑기 아이콘</button>
+        <button id="m-dot" aria-pressed="false">점찍기 사용</button>
+      </div>
+    </div>
+    <div class="boardtools">
+      <button class="btn" id="undo">되돌리기</button>
+      <button class="btn" id="clearBoard">판 비우기</button>
+      <button class="btn" id="newGame">새 게임</button>
+    </div>
+    <p class="hint" id="hint"></p>
+  </section>
+
+  <div class="stack">
+    <section class="panel">
+      <h2>현재 블록 3개 <small>슬롯을 고른 뒤 아래 목록에서 조각을 지정</small></h2>
+      <div class="hand" id="hand"></div>
+      <div class="palette" id="palette"></div>
+    </section>
+
+    <section class="panel">
+      <h2>게임 상태</h2>
+      <div class="stats">
+        <div class="stat"><label for="i-score">점수</label><input id="i-score" type="number" min="0" inputmode="numeric"></div>
+        <div class="stat"><label for="i-lines">제거한 줄</label><input id="i-lines" type="number" min="0" inputmode="numeric"><span class="sub" id="stageTxt"></span></div>
+        <div class="stat"><label for="i-next">다음 능력까지</label><input id="i-next" type="number" min="1" max="7" inputmode="numeric"><span class="sub">번 배치</span></div>
+        <div class="stat"><label for="i-dot">점찍기 보유</label><input id="i-dot" type="number" min="0" max="7" inputmode="numeric"></div>
+        <div class="stat"><label for="i-reroll">바꿔뽑기 보유</label><input id="i-reroll" type="number" min="0" max="7" inputmode="numeric"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="ai-head">
+        <h2 style="margin:0">AI 추천 순위</h2>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn" id="moreSim">시뮬레이션 계속</button>
+          <button class="btn" id="stopSim">중지</button>
+        </div>
+      </div>
+      <div class="bar"><i id="barFill"></i></div>
+      <div class="prog" id="prog">대기 중</div>
+      <div id="advice" style="margin-top:10px"></div>
+      <div class="recs" id="recs"></div>
+      <div class="recbar" id="recbar" hidden>
+        <button class="btn" id="stepPrev">◀ 이전 수</button>
+        <span class="prog" id="stepTxt"></span>
+        <button class="btn" id="stepNext">다음 수 ▶</button>
+        <span class="spacer"></span>
+        <button class="btn primary" id="applyRec">이 수순대로 두기</button>
+      </div>
+      <details class="set">
+        <summary>계산 설정</summary>
+        <div class="setgrid">
+          <label for="s-time">수읽기 시간(초)<input id="s-time" type="number" min="2" max="120" value="10"></label>
+          <label for="s-depth">롤아웃 깊이(손패 수, 1손=3조각)<input id="s-depth" type="number" min="1" max="40" value="8"></label>
+          <label for="s-beam">1차 탐색 빔 폭<input id="s-beam" type="number" min="4" max="60" value="24"></label>
+          <label for="s-ratio">5단계 1칸:10칸 등장 비율(가정)<input id="s-ratio" type="number" min="0.05" max="1" step="0.05" value="0.6"></label>
+          <label for="s-grav">줄 제거 후 위 줄<select id="s-grav"><option value="0">그대로 (기본)</option><option value="1">아래로 내려옴</option></select></label>
+          <label for="s-workers">시뮬레이션 스레드<input id="s-workers" type="number" min="1" max="16" value="2"></label>
+        </div>
+      </details>
+    </section>
+  </div>
+</div>
+
+<p class="foot" id="foot"></p>
+<div class="toast" id="toast" role="status"></div>
+
+<script id="core">
+/*CORE*/
+</script>
+<script id="ntv">
+/*NTV*/
+</script>
+<script id="ntdata">
+/*NTDATA*/
+</script>
+<script id="weights">
+/*WEIGHTS*/
+</script>
+<script>
+(function () {
+  'use strict';
+  const C = window.MoaCore, W = C.W, H = C.H, FULL = C.FULL, P = C.PIECES;
+  const COLOR_IDX = { blue: 1, red: 2, green: 3, yellow: 4 };
+  const CVAR = ['', 'var(--c-blue)', 'var(--c-red)', 'var(--c-green)', 'var(--c-yellow)', 'var(--c-gray)'];
+  const $ = id => document.getElementById(id);
+  const fmt = n => Math.round(n).toLocaleString('ko-KR');
+  const stageName = l => (C.stageOf(l) + 1) + '단계';
+
+  // ---------- 상태 ----------
+  const S = {
+    rows: new Int32Array(H), colors: new Uint8Array(W * H), icons: [], score: 0, lines: 0, dot: 0, reroll: 0, toNext: 7,
+    hand: [null, null, null], sel: 0, mode: 'paint', gravity: false,
+  };
+  const undoStack = [];
+  function snap() {
+    undoStack.push(JSON.stringify({ rows: Array.from(S.rows), colors: Array.from(S.colors), icons: S.icons, score: S.score, lines: S.lines, dot: S.dot, reroll: S.reroll, toNext: S.toNext, hand: S.hand, sel: S.sel }));
+    if (undoStack.length > 200) undoStack.shift();
+  }
+  function undo() {
+    const s = undoStack.pop(); if (!s) return toast('되돌릴 기록이 없습니다');
+    const o = JSON.parse(s);
+    S.rows = Int32Array.from(o.rows); S.colors = Uint8Array.from(o.colors);
+    Object.assign(S, { icons: o.icons, score: o.score, lines: o.lines, dot: o.dot, reroll: o.reroll, toNext: o.toNext, hand: o.hand, sel: o.sel });
+    changed();
+  }
+  // 샘플 상태: 처음 열었을 때 실제 같은 진행 판
+  function loadSample() {
+    const pat = [
+      '..........', '..........', '..........', '..........', '..........', '..........', '..........', '..........',
+      '##........', '###.......', '####...#..', '#####.###.', '######.###', '###.######', '#########.', '####.#####'];
+    S.rows.fill(0); S.colors.fill(0);
+    pat.forEach((r, y) => { for (let x = 0; x < W; x++) if (r[x] === '#') { S.rows[y] |= 1 << x; S.colors[y * W + x] = 5; } });
+    S.icons = [{ x: 9, y: 14, t: 1 }]; S.score = 4812; S.lines = 12; S.dot = 1; S.reroll = 0; S.toNext = 3;
+    S.hand = [{ p: 1, rot: 0, flip: 0 }, { p: 11, rot: 0, flip: 0 }, { p: 5, rot: 0, flip: 0 }]; S.sel = 0;
+  }
+
+  // ---------- 렌더 ----------
+  const board = $('board'), cells = [];
+  const rowAx = [];
+  const ax = t => { const s = document.createElement('span'); s.className = 'ax'; s.textContent = t; board.appendChild(s); return s; };
+  ax(''); for (let i = 0; i < 10; i++) ax(i + 1);
+  for (let y = 0; y < H; y++) {
+    rowAx.push(ax(y + 1));
+    for (let x = 0; x < W; x++) { const d = document.createElement('div'); d.className = 'cell'; d.dataset.x = x; d.dataset.y = y; board.appendChild(d); cells.push(d); }
+  }
+  function miniHTML(cellsArr, color, cls) {
+    let w = 0, h = 0; for (const [x, y] of cellsArr) { w = Math.max(w, x + 1); h = Math.max(h, y + 1); }
+    const set = new Set(cellsArr.map(([x, y]) => y * 16 + x));
+    let s = `<div class="mini ${cls || ''}" style="grid-template-columns:repeat(${w},auto)">`;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) s += `<i style="background:${set.has(y * 16 + x) ? color : 'transparent'}"></i>`;
+    return s + '</div>';
+  }
+  const colorOf = p => CVAR[COLOR_IDX[P[p].color]];
+  function variantOf(h) { return P[h.p].orient[h.flip * 4 + h.rot]; }
+
+  // 미리보기/추천 오버레이
+  let hover = null; // {x,y}
+  let recView = { idx: -1, step: -1 };
+  function overlayInfo() {
+    const ov = new Map();
+    if (S.mode === 'place' && hover && S.hand[S.sel]) {
+      const h = S.hand[S.sel], v = P[h.p].variants[variantOf(h)];
+      const ox = Math.max(0, Math.min(W - v.w, hover.x - (v.w >> 1))), oy = Math.max(0, Math.min(H - v.h, hover.y - (v.h >> 1)));
+      const ok = ox >= 0 && oy >= 0 && ox + v.w <= W && oy + v.h <= H && C.fits(S.rows, v, ox, oy);
+      for (const [cx, cy] of v.cells) { const x = ox + cx, y = oy + cy; if (x >= 0 && y >= 0 && x < W && y < H) ov.set(y * W + x, { pv: true, bad: !ok }); }
+    }
+    return ov;
+  }
+  function render() {
+    // 추천 보기 중이면 해당 단계 보드
+    let rows = S.rows, colors = S.colors, icons = S.icons, recMarks = null, clearRowsSet = null;
+    const rec = recView.idx >= 0 ? recs[recView.idx] : null;
+    if (rec) {
+      const sim = simSteps(rec, recView.step);
+      rows = sim.rows; colors = sim.colors; icons = sim.icons; recMarks = sim.marks; clearRowsSet = sim.clr;
+    }
+    const ov = overlayInfo();
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const i = y * W + x, d = cells[i];
+      const f = (rows[y] >> x) & 1;
+      let cls = 'cell';
+      if (f) cls += ' f c' + (colors[i] || 5);
+      const o = ov.get(i); if (o) cls += ' pv' + (o.bad ? ' bad' : '');
+      let html = '';
+      const ic = icons.find(c => c.x === x && c.y === y);
+      if (ic) html += `<span class="ic t${ic.t}">${ic.t ? '바' : '점'}</span>`;
+      d.style.removeProperty('--rc'); d.style.background = '';
+      if (recMarks && recMarks.has(i)) {
+        const m = recMarks.get(i);
+        cls += (m.cur ? ' rec' : ' recold') + (m.reuse ? ' reuse' : ''); d.style.setProperty('--rc', m.color);
+        html = html + `<span class="no">${m.n}</span>`;
+      }
+      if (clearRowsSet && clearRowsSet.has(y)) cls += ' clr';
+      if (x === 0) rowAx[y].className = 'ax' + (clearRowsSet && clearRowsSet.has(y) ? ' clr' : '');
+      d.className = cls; d.innerHTML = html;
+    }
+  }
+  // 추천 수순: k=-1 전체 번호 표시 / k>=0 k번째 수를 두기 직전 판 + 이번 수 강조
+  function stepCells(s) { return s.type === 'dot' ? [[s.x, s.y]] : P[s.piece].variants[s.v].cells.map(([cx, cy]) => [s.x + cx, s.y + cy]); }
+  function stepColor(s) { return s.type === 'dot' ? 'var(--c-gray)' : colorOf(s.piece); }
+  // k=-1: 원래 판 위에 모든 수를 번호로 겹쳐 표시 (중간에 지워지는 줄은 흰 테두리)
+  // k>=0: k번째 수를 두기 직전 판. 이미 둔 수는 흐린 번호, 이번 수는 강조
+  function simSteps(rec, k) {
+    const st = coreState(), colors = S.colors.slice(), marks = new Map(), clr = new Set();
+    const upto = k < 0 ? rec.steps.length : k;
+    const live = new Map(); // 판에 남아 있는 이전 수 칸 → 번호
+    for (let i = 0; i < upto; i++) {
+      const s = rec.steps[i], tc = stepCells(s);
+      if (k < 0) {
+        for (const [x, y] of tc) {
+          const key = y * W + x, prev = marks.get(key), wasFilled = (S.rows[y] >> x) & 1;
+          marks.set(key, { n: prev ? prev.n + '·' + (i + 1) : String(i + 1), color: stepColor(s), cur: true, reuse: !!(prev || wasFilled) });
+        }
+        const tmp = st.rows.slice(); for (const [x, y] of tc) tmp[y] |= 1 << x;
+        for (let y = 0; y < H; y++) if (tmp[y] === FULL) clr.add(y);
+      } else {
+        for (const [x, y] of tc) live.set(y * W + x, { n: String(i + 1), color: stepColor(s), cur: false });
+      }
+      applyColors(st, colors, tc, s.type === 'dot' ? 5 : COLOR_IDX[P[s.piece].color]);
+      if (s.type === 'dot') C.placeDot(st, s.x, s.y); else { st.hand[s.slot] = s.piece; C.placePiece(st, s.slot, s.v, s.x, s.y); }
+    }
+    if (k < 0) return { rows: S.rows, colors: S.colors, icons: S.icons, marks, clr };
+    for (const [key, m] of live) if ((st.rows[(key / W) | 0] >> (key % W)) & 1) marks.set(key, m);
+    const s = rec.steps[k], tc = stepCells(s), tmp = st.rows.slice();
+    for (const [x, y] of tc) { marks.set(y * W + x, { n: String(k + 1), color: stepColor(s), cur: true }); tmp[y] |= 1 << x; }
+    for (let y = 0; y < H; y++) if (tmp[y] === FULL) clr.add(y);
+    return { rows: st.rows, colors, icons: st.icons, marks, clr };
+  }
+  // colors 배열 갱신 + 줄 제거 반영(코어와 같은 규칙)
+  function applyColors(st, colors, tc, ci) {
+    const rows = st.rows.slice();
+    for (const [x, y] of tc) { rows[y] |= 1 << x; colors[y * W + x] = ci; }
+    const full = []; for (let y = 0; y < H; y++) if (rows[y] === FULL) full.push(y);
+    if (!full.length) return;
+    if (!S.gravity) { for (const y of full) for (let x = 0; x < W; x++) colors[y * W + x] = 0; }
+    else {
+      const keep = []; for (let y = 0; y < H; y++) if (!full.includes(y)) keep.push(colors.slice(y * W, y * W + W));
+      while (keep.length < H) keep.unshift(new Uint8Array(W));
+      keep.forEach((r, y) => colors.set(r, y * W));
+    }
+  }
+
+  function renderHand() {
+    const el = $('hand'); el.innerHTML = '';
+    S.hand.forEach((h, s) => {
+      const b = document.createElement('div');
+      b.className = 'slot' + (h ? '' : ' empty'); b.setAttribute('aria-pressed', S.sel === s); b.tabIndex = 0; b.setAttribute('role', 'button');
+      if (h) {
+        const p = P[h.p], v = p.variants[variantOf(h)];
+        b.innerHTML = `<div class="t">${s + 1}번 · <b>${p.label} ${p.name}</b> · ${p.size}칸</div>${miniHTML(v.cells, colorOf(h.p))}
+          <div class="acts"><button data-a="rot">회전</button><button data-a="flip">반전</button><button data-a="rr" title="게임에서 바꿔뽑기를 썼을 때">바꿔뽑기 사용</button><button data-a="rm">비우기</button></div>`;
+      } else b.innerHTML = `<div class="t">${s + 1}번 · <b>빈 슬롯</b></div><div class="t" style="margin-top:14px">배치 완료 / 미지정</div>`;
+      b.addEventListener('click', e => {
+        const a = e.target.dataset && e.target.dataset.a;
+        if (!a) { S.sel = s; renderHand(); render(); return; }
+        if (a === 'rot') { h.rot = (h.rot + 1) % 4; }
+        else if (a === 'flip') { h.flip ^= 1; h.rot = (4 - h.rot) % 4; }
+        else if (a === 'rm') { snap(); S.hand[s] = null; }
+        else if (a === 'rr') {
+          if (S.reroll < 1) return toast('바꿔뽑기 보유 개수가 0입니다');
+          snap(); S.reroll--; S.hand[s] = null; S.sel = s; toast(`${s + 1}번 슬롯: 새로 나온 조각을 목록에서 고르세요`);
+        }
+        S.sel = s;
+        if (a === 'rot' || a === 'flip') { renderHand(); render(); return; }
+        changed();
+      });
+      el.appendChild(b);
+    });
+  }
+  function renderPalette() {
+    const el = $('palette'); el.innerHTML = '';
+    const pr = C.PROB[C.stageOf(S.lines)];
+    P.forEach((p, i) => {
+      const b = document.createElement('button'); b.className = 'pal';
+      b.innerHTML = `<span class="n">${p.no}. ${p.label}<b>${p.name}</b></span>${miniHTML(p.variants[0].cells, colorOf(i))}<span class="pr">${p.size}칸 · ${(pr[i] * 100).toFixed(1)}%</span>`;
+      b.title = `${p.label} ${p.name} (${p.size}칸) 지정`;
+      b.addEventListener('click', () => {
+        snap(); S.hand[S.sel] = { p: i, rot: 0, flip: 0 };
+        const nx = [1, 2, 0].map(d => (S.sel + d) % 3).find(s => !S.hand[s]);
+        if (nx !== undefined) S.sel = nx;
+        changed();
+      });
+      el.appendChild(b);
+    });
+  }
+  function renderStats() {
+    $('i-score').value = S.score; $('i-lines').value = S.lines; $('i-next').value = S.toNext; $('i-dot').value = S.dot; $('i-reroll').value = S.reroll;
+    $('stageTxt').textContent = stageName(S.lines) + (S.dot + S.reroll >= 7 ? ' · 능력 최대' : '');
+  }
+  const MODE_HINT = {
+    paint: '칸을 누르거나 끌어서 채움/비움을 바꿉니다',
+    place: '선택한 슬롯 조각을 직접 놓습니다 · 우클릭으로 회전',
+    icon0: '점찍기 아이콘 위치를 누르세요 (최대 3개, 초과 시 오래된 것부터 사라짐)',
+    icon1: '바꿔뽑기 아이콘 위치를 누르세요 (최대 3개)',
+    dot: '점찍기로 채울 빈 칸을 누르세요',
+  };
+  function setMode(m) {
+    S.mode = m; ['paint', 'place', 'icon0', 'icon1', 'dot'].forEach(k => $('m-' + k).setAttribute('aria-pressed', k === m));
+    $('modeHint').textContent = MODE_HINT[m]; hover = null; render();
+  }
+
+  // ---------- 보드 입력 ----------
+  let painting = null;
+  function cellFromEvent(e) {
+    const t = document.elementFromPoint(e.clientX, e.clientY);
+    const c = t && t.closest && t.closest('.cell');
+    return c ? { x: +c.dataset.x, y: +c.dataset.y } : null;
+  }
+  board.addEventListener('pointerdown', e => {
+    if (e.button === 2) return;
+    const c = cellFromEvent(e); if (!c) return;
+    clearRecView();
+    const bit = 1 << c.x;
+    if (S.mode === 'paint') {
+      snap(); painting = !((S.rows[c.y] >> c.x) & 1);
+      paintCell(c); board.setPointerCapture(e.pointerId);
+    } else if (S.mode === 'icon0' || S.mode === 'icon1') {
+      snap(); const t = S.mode === 'icon0' ? 0 : 1;
+      const at = S.icons.findIndex(i => i.x === c.x && i.y === c.y);
+      if (at >= 0) S.icons.splice(at, 1);
+      else { if (S.icons.length >= 3) S.icons.shift(); S.icons.push({ x: c.x, y: c.y, t }); }
+      changed();
+    } else if (S.mode === 'dot') {
+      if (S.dot < 1) return toast('점찍기 보유 개수가 0입니다');
+      if (S.rows[c.y] & bit) return toast('빈 칸에만 찍을 수 있습니다');
+      snap(); doDot(c.x, c.y); changed();
+    } else if (S.mode === 'place') {
+      const h = S.hand[S.sel]; if (!h) return toast('선택한 슬롯에 조각이 없습니다');
+      const vi = variantOf(h), v = P[h.p].variants[vi];
+      const ox = Math.max(0, Math.min(W - v.w, c.x - (v.w >> 1))), oy = Math.max(0, Math.min(H - v.h, c.y - (v.h >> 1)));
+      if (ox < 0 || oy < 0 || ox + v.w > W || oy + v.h > H || !C.fits(S.rows, v, ox, oy)) return toast('그 위치에는 놓을 수 없습니다');
+      snap(); doPlace(S.sel, vi, ox, oy); changed();
+    }
+  });
+  function paintCell(c) {
+    const i = c.y * W + c.x;
+    if (painting) { S.rows[c.y] |= 1 << c.x; S.colors[i] = 5; } else { S.rows[c.y] &= ~(1 << c.x); S.colors[i] = 0; }
+    render();
+  }
+  board.addEventListener('pointermove', e => {
+    const c = cellFromEvent(e);
+    if (painting !== null && c) { const f = (S.rows[c.y] >> c.x) & 1; if (!!f !== painting) paintCell(c); return; }
+    if (S.mode === 'place') { if (!c || !hover || c.x !== hover.x || c.y !== hover.y) { hover = c; render(); } }
+  });
+  const endPaint = () => { if (painting !== null) { painting = null; changed(true); } };
+  board.addEventListener('pointerup', endPaint); board.addEventListener('pointercancel', endPaint);
+  board.addEventListener('pointerleave', () => { if (S.mode === 'place') { hover = null; render(); } });
+  board.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const h = S.hand[S.sel]; if (S.mode === 'place' && h) { h.rot = (h.rot + 1) % 4; renderHand(); render(); }
+  });
+
+  // ---------- 실제 게임 진행 반영 ----------
+  function coreState() {
+    const st = C.newState();
+    st.rows = S.rows.slice(); st.icons = S.icons.map(i => ({ ...i })); st.lines = S.lines; st.score = S.score;
+    st.dot = S.dot; st.reroll = S.reroll; st.counter = 7 - S.toNext; st.gravity = S.gravity;
+    st.hand = S.hand.map(h => h ? h.p : -1);
+    return st;
+  }
+  function syncFrom(st) {
+    S.rows = st.rows; S.icons = st.icons; S.lines = st.lines; S.score = st.score; S.dot = st.dot; S.reroll = st.reroll;
+  }
+  function doPlace(slot, vi, x, y) {
+    const st = coreState(), p = S.hand[slot].p;
+    const tc = P[p].variants[vi].cells.map(([cx, cy]) => [x + cx, y + cy]);
+    applyColors(st, S.colors, tc, COLOR_IDX[P[p].color]);
+    const r = C.placePiece(st, slot, vi, x, y);
+    syncFrom(st); S.hand[slot] = null;
+    let msg = `+${fmt(r.gain)}점` + (r.cleared ? ` · ${r.cleared}줄 제거` : '') + (r.acq ? ` · 능력 ${r.acq}개 획득` : '');
+    S.toNext--;
+    if (S.toNext <= 0) {
+      S.toNext = 7;
+      if (S.dot + S.reroll < 7) { msg += ' · 능력 아이콘 생성: 위치를 찍어주세요'; setMode('icon1'); }
+    }
+    toast(msg);
+    if (S.hand.every(h => !h)) { S.sel = 0; }
+    else { const nx = [0, 1, 2].find(s => S.hand[s]); S.sel = nx; }
+  }
+  function doDot(x, y) {
+    const st = coreState();
+    applyColors(st, S.colors, [[x, y]], 5);
+    const r = C.placeDot(st, x, y); syncFrom(st);
+    toast('점찍기' + (r.cleared ? ` · ${r.cleared}줄 제거 +${fmt(r.gain)}점` : ''));
+  }
+
+  // ---------- 입력 필드 ----------
+  const bindNum = (id, key, lo, hi) => $(id).addEventListener('change', e => {
+    let v = Math.round(+e.target.value || 0); v = Math.max(lo, Math.min(hi, v)); snap(); S[key] = v;
+    if (key === 'dot' && S.dot + S.reroll > 7) S.dot = 7 - S.reroll;
+    if (key === 'reroll' && S.dot + S.reroll > 7) S.reroll = 7 - S.dot;
+    changed();
+  });
+  bindNum('i-score', 'score', 0, 500000); bindNum('i-lines', 'lines', 0, 99999); bindNum('i-next', 'toNext', 1, 7);
+  bindNum('i-dot', 'dot', 0, 7); bindNum('i-reroll', 'reroll', 0, 7);
+  ['paint', 'place', 'icon0', 'icon1', 'dot'].forEach(k => $('m-' + k).addEventListener('click', () => setMode(k)));
+  $('undo').addEventListener('click', undo);
+  $('clearBoard').addEventListener('click', () => { snap(); S.rows.fill(0); S.colors.fill(0); S.icons = []; changed(); });
+  $('newGame').addEventListener('click', () => {
+    snap(); S.rows.fill(0); S.colors.fill(0); Object.assign(S, { icons: [], score: 0, lines: 0, dot: 0, reroll: 0, toNext: 7, hand: [null, null, null], sel: 0 });
+    changed();
+  });
+  $('s-grav').addEventListener('change', e => { S.gravity = e.target.value === '1'; changed(); });
+  $('s-ratio').addEventListener('change', e => { let v = Math.max(0.05, Math.min(1, +e.target.value || 0.6)); e.target.value = v; C.setFinalRatio(v); changed(); });
+  ['s-time', 's-depth', 's-beam', 's-workers'].forEach(id => $(id).addEventListener('change', () => changed()));
+  try { $('s-workers').value = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 3) - 1)); } catch (e) {}
+
+  // ---------- AI ----------
+  const coreSrc = document.getElementById('core').textContent;
+  const weightsSrc = document.getElementById('weights').textContent;
+  const ntvSrc = document.getElementById('ntv').textContent;
+  let NT = null; try { if (window.MOA_NT && window.MoaNTV) NT = window.MoaNTV.decode(window.MOA_NT); } catch (e) { NT = null; }
+  const ntMsg = () => NT ? { T: NT.T, L: NT.L } : null;
+  const workerSrc = coreSrc + '\n' + ntvSrc + '\n' + weightsSrc + '\n' + `
+    const C = self.MoaCore;
+    function toState(o){ const st=C.newState(); Object.assign(st,o); st.rows=Int32Array.from(o.rows); st.icons=o.icons.map(i=>({...i})); st.hand=o.hand.slice(); return st; }
+    function key(rows){ return Array.prototype.join.call(rows,','); }
+    self.onmessage = (e) => {
+      const m = e.data; C.setFinalRatio(m.ratio);
+      const vf = m.nt ? self.MoaNTV.makeVF(m.nt, C.WEIGHTS) : null;
+      if (m.type === 'plan') {
+        const st = toState(m.state);
+        const res = C.diversePlans(st, { beam: m.beam, vf }, 8);
+        const out = res.plans.map(n => ({ steps: n.steps, gain: n.gain, v: n.v }));
+        let advice = null;
+        if (st.reroll > 0) {
+          const base = C.plan(st, { beam: 6, finalK: 12, vf }); const bv = base.plans.length ? base.plans[0].v : -1e6;
+          const pr = C.PROB[C.stageOf(st.lines)]; let best = null;
+          for (let s = 0; s < 3; s++) {
+            if (st.hand[s] < 0) continue;
+            let ev = 0;
+            for (let p = 0; p < C.NP; p++) {
+              const t = C.cloneState(st); t.reroll--; t.hand[s] = p;
+              const r = C.plan(t, { beam: 6, finalK: 12, vf }); ev += pr[p] * (r.plans.length ? r.plans[0].v : -1e6);
+            }
+            if (!best || ev > best.ev) best = { slot: s, ev, base: bv };
+          }
+          advice = best;
+        }
+        self.postMessage({ type: 'plan', id: m.id, complete: res.complete, depth: res.depth, need: res.need, plans: out, advice });
+      } else if (m.type === 'roll') {
+        const base = toState(m.state); let seed = m.seed;
+        const stats = m.cands.map(() => ({ n: 0, sum: 0, sq: 0, alive: 0, score: 0 }));
+        const t0 = Date.now(); let last = t0, i = 0;
+        const opts = { beam: 2, finalK: 4, vf };
+        while (Date.now() - t0 < m.ms) {
+          const ci = i++ % m.cands.length, R = C.rng(seed++);
+          const st = C.cloneState(base);
+          C.applyPlan(st, m.cands[ci], R);
+          const r = C.simulate(st, R, opts, m.hands);
+          const val = (r.score - base.score) + (r.alive ? 0 : -m.deathPen);
+          const s = stats[ci]; s.n++; s.sum += val; s.sq += val * val; if (r.alive) s.alive++; s.score += r.score - base.score;
+          const now = Date.now(); if (now - last > 300) { last = now; self.postMessage({ type: 'prog', id: m.id, wid: m.wid, stats }); }
+        }
+        self.postMessage({ type: 'prog', id: m.id, wid: m.wid, stats, done: true });
+      }
+    };`;
+  const workerURL = URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' }));
+  let workers = [], runId = 0, recs = [], recStats = [], perWorker = {}, simStart = 0, simMs = 0, planRes = null;
+  let totalSims = 0; try { totalSims = +localStorage.getItem('moa-total') || 0; } catch (e) {}
+  function killWorkers() { workers.forEach(w => w.terminate()); workers = []; }
+  function settings() {
+    return { ms: Math.max(2, +$('s-time').value || 10) * 1000, hands: Math.max(1, +$('s-depth').value || 8), beam: Math.max(4, +$('s-beam').value || 24),
+      ratio: +$('s-ratio').value || 0.6, nw: Math.max(1, +$('s-workers').value || 2) };
+  }
+  function analyze() {
+    killWorkers(); runId++; recs = []; recStats = []; perWorker = {}; planRes = null; clearRecView(false);
+    const st = coreState();
+    if (st.hand.every(h => h < 0)) {
+      $('prog').textContent = '새 조각 3개를 지정하면 수읽기를 시작합니다';
+      $('advice').innerHTML = ''; $('recs').innerHTML = `<div class="empty-note">조각 목록에서 게임에 나온 블록 3개를 고르세요</div>`; $('barFill').style.width = '0';
+      return;
+    }
+    const cfg = settings(), id = runId;
+    $('prog').textContent = '후보 수 탐색 중…'; $('barFill').style.width = '4%';
+    const w = new Worker(workerURL); workers.push(w);
+    const plain = { rows: Array.from(st.rows), icons: st.icons, lines: st.lines, score: st.score, dot: st.dot, reroll: st.reroll, counter: st.counter, gravity: st.gravity, hand: st.hand };
+    w.onmessage = e => {
+      const m = e.data; if (m.id !== runId) return;
+      w.terminate(); workers = workers.filter(x => x !== w);
+      planRes = m; recs = m.plans; recStats = recs.map(() => ({ n: 0, sum: 0, sq: 0, alive: 0, score: 0 }));
+      renderAdvice(); renderRecs();
+      if (recs.length) { recView = { idx: 0, step: defStep(recs[0]) }; render(); startRollouts(plain, cfg, id); }
+    };
+    w.postMessage({ type: 'plan', id, state: plain, beam: cfg.beam, ratio: cfg.ratio, nt: ntMsg() });
+  }
+  function startRollouts(plain, cfg, id) {
+    perWorker = {}; simStart = Date.now(); simMs = cfg.ms;
+    const cands = recs.map(r => ({ steps: r.steps }));
+    for (let k = 0; k < cfg.nw; k++) {
+      const w = new Worker(workerURL); workers.push(w);
+      w.onmessage = e => {
+        const m = e.data; if (m.id !== runId) return;
+        perWorker[m.wid] = m.stats; aggregate();
+        if (m.done) { w.terminate(); workers = workers.filter(x => x !== w); if (!workers.length) finish(); }
+      };
+      w.postMessage({ type: 'roll', id, wid: k, state: plain, cands, ms: cfg.ms, hands: cfg.hands, deathPen: 3000, ratio: cfg.ratio, nt: ntMsg(), seed: (Math.random() * 1e9) | 0 });
+    }
+    tick();
+  }
+  let lastCount = 0;
+  function aggregate() {
+    recStats = recs.map((_, i) => {
+      const a = { n: 0, sum: 0, sq: 0, alive: 0, score: 0 };
+      for (const k in perWorker) { const s = perWorker[k][i]; a.n += s.n; a.sum += s.sum; a.sq += s.sq; a.alive += s.alive; a.score += s.score; }
+      return a;
+    });
+    renderRecs();
+  }
+  function tick() {
+    if (!workers.length) return;
+    const el = Date.now() - simStart, n = recStats.reduce((a, s) => a + s.n, 0);
+    $('barFill').style.width = Math.min(100, 4 + 96 * el / simMs) + '%';
+    $('prog').textContent = `시뮬레이션 ${fmt(n)}판 · 후보 ${recs.length}개 · ${(el / 1000).toFixed(1)}초 / ${(simMs / 1000) | 0}초 · 누적 ${fmt(totalSims + n)}판`;
+    setTimeout(tick, 200);
+  }
+  function finish() {
+    const n = recStats.reduce((a, s) => a + s.n, 0);
+    totalSims += n; try { localStorage.setItem('moa-total', String(totalSims)); } catch (e) {}
+    $('barFill').style.width = '100%';
+    $('prog').textContent = `완료 · 이번 수읽기 ${fmt(n)}판 · 누적 ${fmt(totalSims)}판`;
+  }
+  function score(i) {
+    const s = recStats[i];
+    if (!s || s.n < 4) return recs[i].v - 1e7; // 롤아웃 전에는 휴리스틱 순
+    return s.sum / s.n;
+  }
+  function renderAdvice() {
+    const el = $('advice'); el.innerHTML = '';
+    if (!planRes) return;
+    const m = planRes, parts = [];
+    if (!m.complete) {
+      parts.push(`<div class="advice bad"><b>${m.need}개 중 ${m.depth}개만 놓을 수 있습니다.</b> ${S.reroll ? '바꿔뽑기' : ''}${S.reroll && S.dot ? ' 또는 ' : ''}${S.dot ? '점찍기로 줄을 지운 뒤' : ''} ${S.reroll || S.dot ? '다시 계산하세요.' : '남은 능력이 없어 이번 손패가 마지막일 수 있습니다.'}</div>`);
+    }
+    if (m.advice && S.reroll > 0) {
+      const d = m.advice.ev - m.advice.base, p = S.hand[m.advice.slot];
+      if (d > 120 || !m.complete) parts.push(`<div class="advice warn">바꿔뽑기 권장: <b>${m.advice.slot + 1}번 슬롯 (${P[p.p].name})</b> · 평가값 기대 +${fmt(d)}. 사용 후 새 조각을 지정하면 다시 계산합니다.</div>`);
+      else parts.push(`<div class="advice info">바꿔뽑기는 아끼는 편이 낫습니다 (가장 나은 슬롯 기준 기대 ${d >= 0 ? '+' : ''}${fmt(d)}).</div>`);
+    }
+    el.innerHTML = parts.join('');
+  }
+  function stepHTML(s, i) {
+    if (s.type === 'dot') return `<span class="st"><span class="num">${i + 1}</span>점찍기 <span class="pos">${s.x + 1}열 ${s.y + 1}행</span>${s.cleared ? `<span class="cl">${s.cleared}줄</span>` : ''}</span>`;
+    const p = P[s.piece], v = p.variants[s.v];
+    return `<span class="st"><span class="num">${i + 1}</span>${miniHTML(v.cells, colorOf(s.piece))}<b>${p.name}</b><span class="pos">${s.x + 1}열 ${s.y + 1}행</span>${s.cleared ? `<span class="cl">${s.cleared}줄</span>` : ''}</span>`;
+  }
+  function renderRecs() {
+    const el = $('recs');
+    if (!recs.length) { el.innerHTML = planRes ? `<div class="empty-note">놓을 수 있는 자리가 없습니다</div>` : ''; $('recbar').hidden = true; return; }
+    const order = recs.map((_, i) => i).sort((a, b) => score(b) - score(a));
+    el.innerHTML = '';
+    order.forEach((i, rank) => {
+      const r = recs[i], s = recStats[i] || { n: 0 };
+      const b = document.createElement('button'); b.className = 'rec'; b.setAttribute('aria-pressed', recView.idx === i);
+      let val;
+      if (s.n >= 4) {
+        const surv = s.alive / s.n, mean = s.sum / s.n, se = Math.sqrt(Math.max(0, s.sq / s.n - mean * mean) / s.n);
+        const sc = surv > .9 ? 'g' : surv > .7 ? 'w' : 'b';
+        val = `<b>${fmt(mean)}</b><span>±${fmt(se * 1.96)} · ${fmt(s.n)}판</span><span><span class="surv ${sc}">생존 ${(surv * 100).toFixed(0)}%</span></span>`;
+      } else val = `<b>${fmt(r.gain)}</b><span>즉시 점수</span><span>계산 대기</span>`;
+      b.innerHTML = `<span class="rk">${rank + 1}</span><span class="seq">${r.steps.map(stepHTML).join('')}<span class="st" style="color:var(--muted)">즉시 +${fmt(r.gain)}</span></span><span class="val">${val}</span>`;
+      b.addEventListener('click', () => { recView = { idx: i, step: defStep(recs[i]) }; renderRecs(); render(); updateStepTxt(); });
+      el.appendChild(b);
+    });
+    $('recbar').hidden = recView.idx < 0;
+    updateStepTxt();
+  }
+  function defStep() { return -1; }
+  function updateStepTxt() {
+    if (recView.idx < 0) return;
+    const n = recs[recView.idx].steps.length;
+    $('stepTxt').textContent = recView.step < 0 ? `전체 ${n}수 · 점선 줄은 수순 중 지워짐 · 사선 칸은 지운 뒤 다시 채움` : `${recView.step + 1}수째 두기 직전 (${n}수 중)`;
+  }
+  function clearRecView(r = true) { if (recView.idx >= 0) { recView = { idx: -1, step: -1 }; $('recbar').hidden = true; if (r) render(); } }
+  $('stepNext').addEventListener('click', () => { if (recView.idx < 0) return; const n = recs[recView.idx].steps.length; recView.step = recView.step >= n - 1 ? -1 : recView.step + 1; render(); updateStepTxt(); });
+  $('stepPrev').addEventListener('click', () => { if (recView.idx < 0) return; const n = recs[recView.idx].steps.length; recView.step = recView.step < 0 ? n - 1 : recView.step - 1; render(); updateStepTxt(); });
+  $('applyRec').addEventListener('click', () => {
+    if (recView.idx < 0) return;
+    const r = recs[recView.idx]; snap();
+    let total = 0, spawned = false;
+    for (const s of r.steps) {
+      if (s.type === 'dot') { const st = coreState(); applyColors(st, S.colors, [[s.x, s.y]], 5); C.placeDot(st, s.x, s.y); syncFrom(st); total += s.gain; continue; }
+      const st = coreState(); const tc = P[s.piece].variants[s.v].cells.map(([cx, cy]) => [s.x + cx, s.y + cy]);
+      applyColors(st, S.colors, tc, COLOR_IDX[P[s.piece].color]);
+      const g = C.placePiece(st, s.slot, s.v, s.x, s.y); syncFrom(st); S.hand[s.slot] = null; total += g.gain;
+      S.toNext--; if (S.toNext <= 0) { S.toNext = 7; if (S.dot + S.reroll < 7) spawned = true; }
+    }
+    S.sel = Math.max(0, [0, 1, 2].findIndex(x => S.hand[x]));
+    if (spawned) setMode('icon1');
+    toast(`수순 반영 +${fmt(total)}점` + (spawned ? ' · 능력 아이콘이 생겼다면 위치를 찍어주세요' : ' · 다음 조각 3개를 지정하세요'));
+    changed();
+  });
+  $('stopSim').addEventListener('click', () => { if (workers.length) { killWorkers(); finish(); } });
+  $('moreSim').addEventListener('click', () => {
+    if (!recs.length || workers.length) return;
+    const st = coreState(), cfg = settings();
+    const plain = { rows: Array.from(st.rows), icons: st.icons, lines: st.lines, score: st.score, dot: st.dot, reroll: st.reroll, counter: st.counter, gravity: st.gravity, hand: st.hand };
+    // 기존 통계 유지: 새 워커 결과를 더함
+    const prev = recStats.map(s => ({ ...s })); const id = runId;
+    perWorker = { base: prev }; simStart = Date.now(); simMs = cfg.ms;
+    const cands = recs.map(r => ({ steps: r.steps }));
+    for (let k = 0; k < cfg.nw; k++) {
+      const w = new Worker(workerURL); workers.push(w);
+      w.onmessage = e => { const m = e.data; if (m.id !== runId) return; perWorker['w' + m.wid] = m.stats; aggregate(); if (m.done) { w.terminate(); workers = workers.filter(x => x !== w); if (!workers.length) finish2(prev); } };
+      w.postMessage({ type: 'roll', id, wid: k, state: plain, cands, ms: cfg.ms, hands: cfg.hands, deathPen: 3000, ratio: cfg.ratio, nt: ntMsg(), seed: (Math.random() * 1e9) | 0 });
+    }
+    tick();
+  });
+  function finish2(prev) {
+    const n = recStats.reduce((a, s) => a + s.n, 0) - prev.reduce((a, s) => a + s.n, 0);
+    totalSims += n; try { localStorage.setItem('moa-total', String(totalSims)); } catch (e) {}
+    $('barFill').style.width = '100%';
+    $('prog').textContent = `완료 · 추가 ${fmt(n)}판 · 후보별 합계 ${fmt(recStats.reduce((a, s) => a + s.n, 0))}판 · 누적 ${fmt(totalSims)}판`;
+  }
+
+  // ---------- 공통 ----------
+  let tmr = 0, debounce = 0;
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(tmr); tmr = setTimeout(() => el.classList.remove('on'), 2600); }
+  function changed() {
+    clearRecView(false);
+    renderHand(); renderPalette(); renderStats(); render();
+    const n = S.hand.filter(Boolean).length;
+    $('hint').innerHTML = n ? `현재 ${stageName(S.lines)} · 손패 ${n}개 · 추천 수를 누르면 판에 수순 번호가 표시됩니다` : '<b>새 조각 3개</b>를 지정하세요';
+    clearTimeout(debounce); debounce = setTimeout(analyze, 300);
+  }
+  const T = window.MOA_TRAIN || {};
+  $('foot').innerHTML = `<b>점수 규칙</b> 배치 칸수 + 동시 제거 n줄당 300×n² (1줄 300 · 2줄 1,200 · 3줄 2,700 · 4줄 4,800 · 5줄 7,500) + 능력 획득 50점, 한 판 최대 500,000점. ` +
+    `<b>조각 확률</b>은 공식 수치가 공개되지 않아 1단계 균등, 단계가 오를수록 칸수가 적은 조각이 덜 나오도록 가정했습니다(계산 설정에서 비율 조정). ` +
+    `<b>평가</b>는 판 모양 패턴표(행 쌍·3×4·4×3 창) 가치 함수를 TD 자가대국 ${fmt(T.td || 0)}판으로 학습했고, 기존 평가식 가중치는 자가대국 ${fmt(T.games || 0)}판으로 맞췄습니다. ${T.bench ? T.bench + ' ' : ''}추천 순위는 각 후보 수순 뒤 무작위 미래 조각으로 설정한 깊이만큼 실제로 두어 본 평균 점수입니다(도중 게임 오버 시 −3,000). 능력 아이콘이 생기는 위치는 무작위라 실제 게임 화면을 보고 직접 찍어 주세요.`;
+  setMode('paint'); loadSample(); changed();
+})();
+</script>

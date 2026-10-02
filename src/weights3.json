@@ -1,0 +1,24 @@
+{
+ "mean": {
+  "holes": -62.876,
+  "segs": -98.106,
+  "rowTrans": -1.852,
+  "colTrans": -9,
+  "fill2": 3.881,
+  "near": 0.098,
+  "emptyRows": 19.361,
+  "filled": 7.317,
+  "space3": -3.506,
+  "icon": 16.308,
+  "dot": 640.988,
+  "reroll": 222.341,
+  "fitP": 138.919,
+  "fitMiss": -20.72,
+  "deep": 11.291,
+  "combo": 7.78,
+  "fitCnt": 656.481,
+  "minFit": 3.823
+ },
+ "totalGames": 37920,
+ "gen": 39
+}
