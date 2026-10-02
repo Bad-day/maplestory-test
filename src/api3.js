@@ -74,7 +74,7 @@ if (!isMainThread) {
 
 function collect(file, out, N, beam, H, start, distill) {
   const nt = os.cpus().length; let next = 0, got = 0; const sc = [], t0 = Date.now();
-  const fd = fs.openSync(out, 'w'); let samples = 0;
+  const fd = fs.openSync(out, process.env.APPEND ? 'a' : 'w'); let samples = 0;
   for (let i = 0; i < nt; i++) {
     const w = new Worker(__filename, { workerData: { file, beam, H, distill } });
     w.on('message', r => {
