@@ -23,6 +23,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, .cell:focus-vis
 .top { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 14px; }
 .top h1 { font-family: var(--f-display); font-weight: 400; font-size: 28px; margin: 0; letter-spacing: .5px; }
 .top .crumb { color: var(--muted); font-size: 13px; }
+.top .ver { margin-left: auto; align-self: center; font: 600 12px var(--f-mono); color: var(--accent); border: 1px solid var(--line2); border-radius: 20px; padding: 3px 10px; white-space: nowrap; }
 .wrap { display: grid; grid-template-columns: minmax(0, 520px) minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1280px; }
 @media (max-width: 920px) { .wrap { grid-template-columns: minmax(0, 1fr); } }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
@@ -164,6 +165,7 @@ kbd { font: 600 11.5px var(--f-mono); background: var(--panel2); border: 1px sol
 <div class="top">
   <h1>한글 모아모아 수읽기</h1>
   <span class="crumb">10×16 판 · 19종 조각 · 손패 3개 · 회전·반전 · 가로줄만 제거</span>
+  <span class="ver" title="탐색 증류 4회차 표">ver 1.0.4</span>
 </div>
 <ol class="flow" aria-label="사용 순서">
   <li><b>판 옮기기</b> 실제 게임판을 칠하고 능력 아이콘 위치를 찍습니다</li>
