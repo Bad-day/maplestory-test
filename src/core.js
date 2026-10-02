@@ -322,9 +322,10 @@
       for (const h of hands) {
         const st = { rows: c.rows, icons: c.icons, dot: c.dot, reroll: c.reroll, lines: c.lines, hand: h, gravity: state.gravity };
         const r2 = plan(st, o2);
-        sum += r2.plans.length ? r2.plans[0].v : (opts.vf ? opts.vf.full(c) : fullEval(c, opts.w)) - 15000;
+        sum += (r2.plans.length ? r2.plans[0].v : (opts.vf ? opts.vf.full(c) : fullEval(c, opts.w)) - 15000) - (r2.complete ? 0 : (look.pen || 0));
       }
       c.look = c.gain + sum / hands.length;
+      if (look.onCand) look.onCand(c, sum / hands.length); // 학습 데이터 수집용: 후보 결과판과 다음 손 기대값
     }
     vfCur = opts.vf || null;
     cand.sort((a, b) => b.look - a.look);

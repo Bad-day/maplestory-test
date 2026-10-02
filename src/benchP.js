@@ -11,7 +11,7 @@ if (!isMainThread) {
   parentPort.on('message', seed => {
     if (seed < 0) process.exit(0);
     const opts = { w, vf, beam, finalK: beam * 2 };
-    if (process.env.LOOK) { const [K, M, b] = process.env.LOOK.split(',').map(Number); opts.look = { K, M, beam: b }; opts.lookR = C.rng(seed ^ 0x5bd1e995); }
+    if (process.env.LOOK) { const [K, M, b] = process.env.LOOK.split(',').map(Number); opts.look = { K, M, beam: b, pen: +process.env.LOOK_PEN || 0 }; opts.lookR = C.rng(seed ^ 0x5bd1e995); }
     const r = C.simulate(C.newState(), C.rng(seed), opts, 1e6);
     parentPort.postMessage({ seed, score: r.score, lines: r.lines });
   });

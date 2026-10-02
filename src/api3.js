@@ -2,6 +2,9 @@
 // 목표값 = 각 배치 직후 판에서 "이후 H손 동안 실제로 얻은 점수"(100점 단위). 부트스트랩이 없어 발산하지 않는다.
 //   node api3.js collect <모델.bin> <출력.dat> <판 수> [탐색 폭=8] [H=300] [시작 시드=1]
 //   node api3.js fit <모델.bin> <출력.bin> <에폭> <학습률> <데이터.dat ...>
+//   node api3.js distill <모델.bin> <출력.dat> <판 수> [K=8] [M=16] [시작 시드=1]
+//     탐색 증류: 한 손 앞보기로 자가대국하며, 앞보기가 후보마다 계산한 "다음 손 기대값"(손패 M개 평균)을
+//     그 후보 결과판의 목표값으로 기록한다. 목표 분산이 작고 추가 계산이 들지 않는다.
 const { Worker, isMainThread, parentPort, workerData } = require('worker_threads');
 const fs = require('fs'), os = require('os');
 const C = require('./core.js'), V = require('./ntv2.js');
@@ -49,23 +52,31 @@ function playRecord(M, seed, beam, H) {
   return { score: st.score, hands, rec: out };
 }
 
+function playDistill(M, seed, K, Mn) {
+  const vf = V.makeVF(M, W3), out = [];
+  const look = { K, M: Mn, beam: 4, onCand: (c, next) => out.push(c.rows.slice(), V.feat1(c.rows, c.icons, c.dot, c.reroll, W3), V.feat2(c.rows, c.lines, W3), next / 100) };
+  const opts = { w: W3, vf, beam: 8, finalK: 16, look, lookR: C.rng(seed ^ 0x5bd1e995) };
+  const r = C.simulate(C.newState(), C.rng(seed), opts, 1e6);
+  return { score: r.score, hands: r.hands, rec: out };
+}
+
 if (!isMainThread) {
-  const { file, beam, H } = workerData; const o = load(file);
+  const { file, beam, H, distill } = workerData; const o = load(file);
   const M = { T: o.T, L: Float32Array.from(o.L) };
   parentPort.on('message', seed => {
     if (seed < 0) process.exit(0);
-    const r = playRecord(M, seed, beam, H);
+    const r = distill ? playDistill(M, seed, distill[0], distill[1]) : playRecord(M, seed, beam, H);
     const n = r.rec.length / 4, buf = new Float32Array(n * REC);
     for (let i = 0; i < n; i++) { buf.set(r.rec[i * 4], i * REC); buf[i * REC + 16] = r.rec[i * 4 + 1]; buf[i * REC + 17] = r.rec[i * 4 + 2]; buf[i * REC + 18] = r.rec[i * 4 + 3]; }
     parentPort.postMessage({ score: r.score, hands: r.hands, buf }, [buf.buffer]);
   });
 }
 
-function collect(file, out, N, beam, H, start) {
+function collect(file, out, N, beam, H, start, distill) {
   const nt = os.cpus().length; let next = 0, got = 0; const sc = [], t0 = Date.now();
   const fd = fs.openSync(out, 'w'); let samples = 0;
   for (let i = 0; i < nt; i++) {
-    const w = new Worker(__filename, { workerData: { file, beam, H } });
+    const w = new Worker(__filename, { workerData: { file, beam, H, distill } });
     w.on('message', r => {
       fs.writeSync(fd, Buffer.from(r.buf.buffer)); samples += r.buf.length / REC; sc.push(r.score); got++;
       if (next < N) w.postMessage(start + next++); else w.postMessage(-1);
@@ -111,6 +122,7 @@ function fit(file, out, epochs, alpha, dats) {
 if (isMainThread && require.main === module) {
   const a = process.argv.slice(2);
   if (a[0] === 'collect') collect(a[1], a[2], +a[3], +a[4] || 8, +a[5] || 300, +a[6] || 1);
+  else if (a[0] === 'distill') collect(a[1], a[2], +a[3], 8, 0, +a[6] || 1, [+a[4] || 8, +a[5] || 16]);
   else if (a[0] === 'fit') fit(a[1], a[2], +a[3], +a[4], a.slice(5));
   else console.log('usage: collect | fit');
 }
