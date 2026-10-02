@@ -125,81 +125,134 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 .foot b { color: var(--muted); font-weight: 600; }
 .toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 8px 14px; border-radius: 9px; font-size: 13px; font-weight: 600; opacity: 0; pointer-events: none; transition: opacity .2s; max-width: calc(100% - 32px); }
 .toast.on { opacity: 1; }
+/* 사용 흐름 / 패널 머리 / 안내 */
+.skip { position: absolute; left: -999px; }
+.skip:focus { left: 16px; top: 16px; z-index: 5; background: var(--panel); padding: 10px; border-radius: 8px; }
+.flow { list-style: none; counter-reset: f; display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0 0 14px; max-width: 1280px; }
+.flow li { counter-increment: f; flex: 1 1 220px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px 8px 40px; position: relative; color: var(--muted); font-size: 12.5px; }
+.flow li::before { content: counter(f); position: absolute; left: 11px; top: 9px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); font: 700 12px var(--f-mono); display: flex; align-items: center; justify-content: center; }
+.flow li b { color: var(--fg); display: block; font-size: 13px; }
+kbd { font: 600 11.5px var(--f-mono); background: var(--panel2); border: 1px solid var(--line2); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--fg); }
+.phead { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+.phead h2 { margin: 0; }
+.eyebrow { font: 700 10.5px var(--f-mono); letter-spacing: .12em; color: var(--accent); margin: 0 0 3px; }
+.badge { font: 600 11px var(--f-mono); color: var(--muted); border: 1px solid var(--line2); border-radius: 20px; padding: 3px 9px; white-space: nowrap; }
+.advance { display: flex; gap: 12px; align-items: center; margin-bottom: 10px; }
+.advance p { margin: 0; color: var(--muted); font-size: 12px; }
+.btn.big { padding: 9px 14px; font-size: 14px; white-space: nowrap; }
+.modehint { color: var(--muted); font-size: 12.5px; margin: 8px 0; min-height: 19px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11.5px; color: var(--muted); margin-top: 8px; }
+.legend span { display: inline-flex; align-items: center; gap: 4px; }
+.legend i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.lg-f { background: var(--filled); } .lg-r { background: var(--c-yellow); box-shadow: inset 0 0 0 1px #fff; } .lg-a { background: var(--cell); box-shadow: inset 0 0 0 2px var(--accent); } .lg-c { border: 1.5px dashed var(--warn); }
+.preview { font-size: 13px; color: var(--accent); margin: 8px 0 0; min-height: 20px; }
+.sub-hint { color: var(--muted); font-size: 12.5px; margin: 0 0 10px; }
+.cell.anc::before { content: ""; position: absolute; left: 2px; top: 2px; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); border: 1.5px solid var(--bg); z-index: 2; }
+.cell.kfocus { outline: 2px solid var(--accent); outline-offset: 1px; z-index: 3; }
+.slot input.jamo { width: 52px; text-align: center; background: var(--bg); border: 1px solid var(--line2); border-radius: 7px; font: 600 16px var(--f-body); padding: 2px 4px; }
+.slot input.jamo.bad { border-color: var(--bad); }
+.slot .t .k { font: 600 10.5px var(--f-mono); color: var(--faint); }
+.detail { background: var(--panel2); border: 1px solid var(--line2); border-radius: 10px; padding: 10px 12px; margin-top: 10px; font-size: 13px; }
+.detail ol { margin: 4px 0 0; padding-left: 20px; }
+.detail li { margin: 2px 0; }
+.detail .note { color: var(--muted); font-size: 12px; margin-top: 6px; }
+@media (max-width: 600px) { .advance { flex-direction: column; align-items: stretch; } }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 </style>
 
+<a href="#board" class="skip">게임판으로 건너뛰기</a>
 <div class="top">
   <h1>한글 모아모아 수읽기</h1>
-  <span class="crumb">10×16 판 · 19종 조각 · 3개 손패 · 회전·반전 · 가로줄만 제거 · 몬테카를로 수읽기</span>
+  <span class="crumb">10×16 판 · 19종 조각 · 손패 3개 · 회전·반전 · 가로줄만 제거</span>
 </div>
+<ol class="flow" aria-label="사용 순서">
+  <li><b>판 옮기기</b> 실제 게임판을 칠하고 능력 아이콘 위치를 찍습니다</li>
+  <li><b>조각 3개 입력</b> 슬롯에 <kbd>ㅇ</kbd>처럼 한 글자를 치거나 목록에서 고릅니다</li>
+  <li><b>추천대로 두기</b> 게임에서 그대로 둔 뒤 <b>다음 단계로 진행</b>을 누릅니다</li>
+</ol>
 
 <div class="wrap">
-  <section class="panel">
-    <h2>기보판 <small id="modeHint">칸을 눌러 현재 게임판을 옮겨 적으세요</small></h2>
-    <div class="board" id="board" aria-label="게임판 10열 16행"></div>
+  <section class="panel" aria-labelledby="h-board">
+    <div class="phead"><div><p class="eyebrow">01 / 게임판</p><h2 id="h-board">현재 게임판</h2></div><span class="badge" id="boardCount">0 / 160칸</span></div>
+    <div class="advance">
+      <button class="btn primary big" id="applyRec" disabled>다음 단계로 진행 →</button>
+      <p>선택한 추천 수순을 게임에서 둔 뒤 누르세요. 판·점수·줄 수·능력 카운트가 갱신되고 다음 수를 찾습니다.</p>
+    </div>
     <div class="boardtools">
-      <div class="seg" role="group" aria-label="입력 방식">
-        <button id="m-paint" aria-pressed="true">칸 칠하기</button>
-        <button id="m-place" aria-pressed="false">조각 놓기</button>
-        <button id="m-icon0" aria-pressed="false">점찍기 아이콘</button>
-        <button id="m-icon1" aria-pressed="false">바꿔뽑기 아이콘</button>
+      <div class="seg" role="group" aria-label="판 편집 도구">
+        <button id="m-paint" aria-pressed="true" title="단축키 B">■ 블록</button>
+        <button id="m-erase" aria-pressed="false" title="블록과 아이콘을 함께 지웁니다 (단축키 E)">칸 비우기</button>
+        <button id="m-icon0" aria-pressed="false" title="단축키 D">◎ 점찍기 아이콘</button>
+        <button id="m-icon1" aria-pressed="false" title="단축키 S">↻ 바꿔뽑기 아이콘</button>
+        <button id="m-iconx" aria-pressed="false">아이콘만 지우기</button>
+      </div>
+      <div class="seg" role="group" aria-label="직접 두기">
+        <button id="m-place" aria-pressed="false" title="단축키 P · R 회전 · F 반전">조각 놓기</button>
         <button id="m-dot" aria-pressed="false">점찍기 사용</button>
       </div>
     </div>
-    <div class="boardtools">
-      <button class="btn" id="undo">되돌리기</button>
-      <button class="btn" id="clearBoard">판 비우기</button>
-      <button class="btn" id="newGame">새 게임</button>
+    <p class="modehint" id="modeHint"></p>
+    <div class="board" id="board" role="grid" aria-label="게임판 10열 16행"></div>
+    <div class="legend" aria-hidden="true">
+      <span><i class="lg-f"></i>현재 블록</span><span><i class="lg-r"></i>추천 수순(번호)</span><span><i class="lg-a"></i>기준칸</span><span><i class="lg-c"></i>지워지는 줄</span><span>◎ 점찍기 · ↻ 바꿔뽑기</span>
     </div>
-    <p class="hint" id="hint"></p>
+    <p class="preview" id="preview" aria-live="polite"></p>
+    <p class="hint">클릭·드래그로 입력 · 방향키로 칸 이동, <kbd>Space</kbd>로 현재 도구 적용 · <kbd>Ctrl</kbd>+<kbd>Z</kbd> 되돌리기</p>
+    <div class="boardtools">
+      <button class="btn" id="undo">↶ 되돌리기</button>
+      <button class="btn" id="clearBoard">판 비우기</button>
+      <button class="btn" id="newGame" title="판·조각·점수·줄 수·능력을 모두 처음으로 돌립니다">초기화</button>
+      <button class="btn" id="sample" title="진행 중인 예시 판을 불러옵니다">예시 판</button>
+    </div>
   </section>
 
   <div class="stack">
-    <section class="panel">
-      <h2>현재 블록 3개 <small>슬롯을 고른 뒤 아래 목록에서 조각을 지정</small></h2>
+    <section class="panel" aria-labelledby="h-hand">
+      <div class="phead"><div><p class="eyebrow">02 / 손패</p><h2 id="h-hand">현재 블록 3개</h2></div><span class="badge" title="입력칸 밖에서 숫자키로 슬롯 선택">1 · 2 · 3</span></div>
+      <p class="sub-hint">입력칸에 <kbd>ㅇ</kbd> <kbd>ㅏ</kbd>처럼 한 글자를 치면 지정되고 다음 슬롯으로 넘어갑니다. 한 칸짜리는 <kbd>.</kbd> 입니다.</p>
       <div class="hand" id="hand"></div>
-      <div class="palette" id="palette"></div>
+      <div class="palette" id="palette" aria-label="조각 목록"></div>
     </section>
 
-    <section class="panel">
-      <h2>게임 상태</h2>
+    <section class="panel" aria-labelledby="h-stat">
+      <div class="phead"><div><p class="eyebrow">03 / 상태</p><h2 id="h-stat">게임 상태</h2></div><span class="badge" id="stageBadge">1단계</span></div>
       <div class="stats">
         <div class="stat"><label for="i-score">점수</label><input id="i-score" type="number" min="0" inputmode="numeric"></div>
         <div class="stat"><label for="i-lines">제거한 줄</label><input id="i-lines" type="number" min="0" inputmode="numeric"><span class="sub" id="stageTxt"></span></div>
         <div class="stat"><label for="i-next">다음 능력까지</label><input id="i-next" type="number" min="1" max="7" inputmode="numeric"><span class="sub">번 배치</span></div>
-        <div class="stat"><label for="i-dot">점찍기 보유</label><input id="i-dot" type="number" min="0" max="7" inputmode="numeric"></div>
-        <div class="stat"><label for="i-reroll">바꿔뽑기 보유</label><input id="i-reroll" type="number" min="0" max="7" inputmode="numeric"></div>
+        <div class="stat"><label for="i-dot">◎ 점찍기 보유</label><input id="i-dot" type="number" min="0" max="7" inputmode="numeric"></div>
+        <div class="stat"><label for="i-reroll">↻ 바꿔뽑기 보유</label><input id="i-reroll" type="number" min="0" max="7" inputmode="numeric"><span class="sub">두 능력 합계 최대 7</span></div>
       </div>
     </section>
 
-    <section class="panel">
+    <section class="panel" aria-labelledby="h-ai">
       <div class="ai-head">
-        <h2 style="margin:0">AI 추천 순위</h2>
+        <div><p class="eyebrow">다음 수</p><h2 id="h-ai" style="margin:0">AI 추천 순위</h2></div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
-          <button class="btn" id="moreSim">시뮬레이션 계속</button>
+          <button class="btn" id="moreSim">더 읽기</button>
           <button class="btn" id="stopSim">중지</button>
         </div>
       </div>
       <div class="bar"><i id="barFill"></i></div>
-      <div class="prog" id="prog">대기 중</div>
+      <div class="prog" id="prog" role="status" aria-live="polite">대기 중</div>
       <div id="advice" style="margin-top:10px"></div>
-      <div class="recs" id="recs"></div>
+      <div class="detail" id="detail" hidden></div>
       <div class="recbar" id="recbar" hidden>
         <button class="btn" id="stepPrev">◀ 이전 수</button>
         <span class="prog" id="stepTxt"></span>
         <button class="btn" id="stepNext">다음 수 ▶</button>
-        <span class="spacer"></span>
-        <button class="btn primary" id="applyRec">이 수순대로 두기</button>
       </div>
+      <div class="recs" id="recs" style="margin-top:10px"></div>
+      <button class="btn" id="moreRecs" style="margin-top:8px" hidden></button>
       <details class="set">
         <summary>계산 설정</summary>
         <div class="setgrid">
-          <label for="s-time">수읽기 시간(초)<input id="s-time" type="number" min="2" max="120" value="10"></label>
-          <label for="s-depth">롤아웃 깊이(손패 수, 1손=3조각)<input id="s-depth" type="number" min="1" max="40" value="8"></label>
+          <label for="s-time">수읽기 시간(초)<input id="s-time" type="number" min="2" max="120" value="8"></label>
+          <label for="s-lbeam">앞보기 빔 폭(다음 손패 탐색)<input id="s-lbeam" type="number" min="2" max="16" value="4"></label>
           <label for="s-beam">1차 탐색 빔 폭<input id="s-beam" type="number" min="4" max="60" value="24"></label>
           <label for="s-ratio">5단계 1칸:10칸 등장 비율(가정)<input id="s-ratio" type="number" min="0.05" max="1" step="0.05" value="0.6"></label>
           <label for="s-grav">줄 제거 후 위 줄<select id="s-grav"><option value="0">그대로 (기본)</option><option value="1">아래로 내려옴</option></select></label>
-          <label for="s-workers">시뮬레이션 스레드<input id="s-workers" type="number" min="1" max="16" value="2"></label>
+          <label for="s-workers">계산 스레드<input id="s-workers" type="number" min="1" max="16" value="2"></label>
         </div>
       </details>
     </section>
@@ -207,7 +260,7 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 </div>
 
 <p class="foot" id="foot"></p>
-<div class="toast" id="toast" role="status"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script id="core">
 /*CORE*/
@@ -266,7 +319,7 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   ax(''); for (let i = 0; i < 10; i++) ax(i + 1);
   for (let y = 0; y < H; y++) {
     rowAx.push(ax(y + 1));
-    for (let x = 0; x < W; x++) { const d = document.createElement('div'); d.className = 'cell'; d.dataset.x = x; d.dataset.y = y; board.appendChild(d); cells.push(d); }
+    for (let x = 0; x < W; x++) { const d = document.createElement('div'); d.className = 'cell'; d.dataset.x = x; d.dataset.y = y; d.setAttribute('role', 'gridcell'); d.tabIndex = x === 0 && y === 0 ? 0 : -1; board.appendChild(d); cells.push(d); }
   }
   function miniHTML(cellsArr, color, cls) {
     let w = 0, h = 0; for (const [x, y] of cellsArr) { w = Math.max(w, x + 1); h = Math.max(h, y + 1); }
@@ -280,6 +333,7 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
 
   // 미리보기/추천 오버레이
   let hover = null; // {x,y}
+  let kf = { x: 0, y: 0 }; // 키보드 포커스 칸
   let recView = { idx: -1, step: -1 };
   function overlayInfo() {
     const ov = new Map();
@@ -293,11 +347,12 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   }
   function render() {
     // 추천 보기 중이면 해당 단계 보드
-    let rows = S.rows, colors = S.colors, icons = S.icons, recMarks = null, clearRowsSet = null;
+    let rows = S.rows, colors = S.colors, icons = S.icons, recMarks = null, clearRowsSet = null, anchors = null;
     const rec = recView.idx >= 0 ? recs[recView.idx] : null;
     if (rec) {
       const sim = simSteps(rec, recView.step);
       rows = sim.rows; colors = sim.colors; icons = sim.icons; recMarks = sim.marks; clearRowsSet = sim.clr;
+      anchors = new Set(rec.steps.filter((t, i) => t.type === 'piece' && (recView.step < 0 || i === recView.step)).map(t => t.y * W + t.x));
     }
     const ov = overlayInfo();
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
@@ -308,7 +363,9 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       const o = ov.get(i); if (o) cls += ' pv' + (o.bad ? ' bad' : '');
       let html = '';
       const ic = icons.find(c => c.x === x && c.y === y);
-      if (ic) html += `<span class="ic t${ic.t}">${ic.t ? '바' : '점'}</span>`;
+      if (ic) html += `<span class="ic t${ic.t}">${ic.t ? '↻' : '◎'}</span>`;
+      if (anchors && anchors.has(i)) cls += ' anc';
+      if (kf.x === x && kf.y === y && document.activeElement === d) cls += ' kfocus';
       d.style.removeProperty('--rc'); d.style.background = '';
       if (recMarks && recMarks.has(i)) {
         const m = recMarks.get(i);
@@ -318,7 +375,10 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       if (clearRowsSet && clearRowsSet.has(y)) cls += ' clr';
       if (x === 0) rowAx[y].className = 'ax' + (clearRowsSet && clearRowsSet.has(y) ? ' clr' : '');
       d.className = cls; d.innerHTML = html;
+      d.setAttribute('aria-label', `${x + 1}열 ${y + 1}행 ${f ? '채워짐' : '빈 칸'}${ic ? (ic.t ? ', 바꿔뽑기 아이콘' : ', 점찍기 아이콘') : ''}${recMarks && recMarks.has(i) ? ', 추천 ' + recMarks.get(i).n + '수' : ''}`);
     }
+    let n = 0; for (let y = 0; y < H; y++) n += C.POP[S.rows[y]];
+    $('boardCount').textContent = `${n} / 160칸`;
   }
   // 추천 수순: k=-1 전체 번호 표시 / k>=0 k번째 수를 두기 직전 판 + 이번 수 강조
   function stepCells(s) { return s.type === 'dot' ? [[s.x, s.y]] : P[s.piece].variants[s.v].cells.map(([cx, cy]) => [s.x + cx, s.y + cy]); }
@@ -365,32 +425,58 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
     }
   }
 
+  // 글자 → 조각 번호 (자모 호환 문자와 한 칸 조각 표기 포함)
+  const JAMO = { 'ᄀ': 'ㄱ', 'ᄂ': 'ㄴ', 'ᄃ': 'ㄷ', 'ᄅ': 'ㄹ', 'ᄆ': 'ㅁ', 'ᄇ': 'ㅂ', 'ᄉ': 'ㅅ', 'ᄋ': 'ㅇ', 'ᄌ': 'ㅈ', 'ᄎ': 'ㅊ', 'ᄏ': 'ㅋ', 'ᄐ': 'ㅌ', 'ᄑ': 'ㅍ', 'ᄒ': 'ㅎ', 'ᅡ': 'ㅏ', 'ᅣ': 'ㅑ', 'ᅳ': 'ㅡ', 'ᅵ': 'ㅣ', '.': '·', 'ㆍ': '·', '•': '·', '-': 'ㅡ', '|': 'ㅣ' };
+  function pieceFromText(t) { t = (t || '').trim(); if (!t) return -1; t = t[t.length - 1]; t = JAMO[t] || t; return P.findIndex(p => p.name === t); }
+  function nextEmpty(from) { return [1, 2, 0].map(d => (from + d) % 3).find(x => !S.hand[x]); }
+  function setSlot(s, pid) {
+    if (pid < 0 || (S.hand[s] && S.hand[s].p === pid)) return false;
+    snap(); S.hand[s] = { p: pid, rot: 0, flip: 0 }; return true;
+  }
+  let focusSlot = -1; // 다시 그린 뒤 입력칸 포커스 복원
   function renderHand() {
     const el = $('hand'); el.innerHTML = '';
     S.hand.forEach((h, s) => {
       const b = document.createElement('div');
-      b.className = 'slot' + (h ? '' : ' empty'); b.setAttribute('aria-pressed', S.sel === s); b.tabIndex = 0; b.setAttribute('role', 'button');
-      if (h) {
-        const p = P[h.p], v = p.variants[variantOf(h)];
-        b.innerHTML = `<div class="t">${s + 1}번 · <b>${p.label} ${p.name}</b> · ${p.size}칸</div>${miniHTML(v.cells, colorOf(h.p))}
-          <div class="acts"><button data-a="rot">회전</button><button data-a="flip">반전</button><button data-a="rr" title="게임에서 바꿔뽑기를 썼을 때">바꿔뽑기 사용</button><button data-a="rm">비우기</button></div>`;
-      } else b.innerHTML = `<div class="t">${s + 1}번 · <b>빈 슬롯</b></div><div class="t" style="margin-top:14px">배치 완료 / 미지정</div>`;
+      b.className = 'slot' + (h ? '' : ' empty'); b.setAttribute('aria-pressed', S.sel === s);
+      const p = h ? P[h.p] : null, v = h ? p.variants[variantOf(h)] : null;
+      b.innerHTML = `<div class="t">${s + 1}번 <span class="k">[${s + 1}]</span> · <b>${h ? p.label + ' ' + p.name : '빈 슬롯'}</b>${h ? ' · ' + p.size + '칸' : ''}</div>
+        <input class="jamo" maxlength="4" autocomplete="off" spellcheck="false" placeholder="입력" aria-label="${s + 1}번 슬롯 조각 글자" value="${h ? p.name : ''}">
+        ${h ? miniHTML(v.cells, colorOf(h.p)) : '<div class="t">배치 완료 / 미지정</div>'}
+        ${h ? `<div class="acts"><button data-a="rot" title="단축키 R">회전</button><button data-a="flip" title="단축키 F">반전</button><button data-a="rr" title="게임에서 바꿔뽑기를 썼을 때">바꿔뽑기 사용</button><button data-a="rm">비우기</button></div>` : ''}`;
+      const inp = b.querySelector('input');
+      const commit = (advance) => {
+        const pid = pieceFromText(inp.value);
+        if (inp.value.trim() && pid < 0) { inp.classList.add('bad'); return toast('알 수 없는 조각입니다. ㄱ ㅏ · 처럼 한 글자로 입력하세요'); }
+        S.sel = s; const did = setSlot(s, pid);
+        if (advance) { const nx = nextEmpty(s); focusSlot = nx === undefined ? -1 : nx; if (nx !== undefined) S.sel = nx; }
+        if (did || advance) changed();
+      };
+      inp.addEventListener('focus', () => { if (S.sel !== s) { S.sel = s; [...el.children].forEach((c, i) => c.setAttribute('aria-pressed', i === s)); } inp.select(); });
+      inp.addEventListener('input', e => { inp.classList.remove('bad'); if (!e.isComposing && pieceFromText(inp.value) >= 0) commit(true); });
+      inp.addEventListener('compositionend', () => { if (pieceFromText(inp.value) >= 0) commit(true); });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); if (inp.value.trim()) commit(true); else { const nx = (s + 1) % 3; S.sel = nx; focusSlot = nx; renderHand(); } }
+        else if (e.key === 'Escape') inp.blur();
+      });
       b.addEventListener('click', e => {
         const a = e.target.dataset && e.target.dataset.a;
+        if (e.target === inp) return;
         if (!a) { S.sel = s; renderHand(); render(); return; }
         if (a === 'rot') { h.rot = (h.rot + 1) % 4; }
         else if (a === 'flip') { h.flip ^= 1; h.rot = (4 - h.rot) % 4; }
         else if (a === 'rm') { snap(); S.hand[s] = null; }
         else if (a === 'rr') {
           if (S.reroll < 1) return toast('바꿔뽑기 보유 개수가 0입니다');
-          snap(); S.reroll--; S.hand[s] = null; S.sel = s; toast(`${s + 1}번 슬롯: 새로 나온 조각을 목록에서 고르세요`);
+          snap(); S.reroll--; S.hand[s] = null; S.sel = s; focusSlot = s; toast(`${s + 1}번 슬롯: 새로 나온 조각을 입력하세요`);
         }
         S.sel = s;
-        if (a === 'rot' || a === 'flip') { renderHand(); render(); return; }
+        if (a === 'rot' || a === 'flip') { renderHand(); render(); save(); return; }
         changed();
       });
       el.appendChild(b);
     });
+    if (focusSlot >= 0) { const f = el.children[focusSlot].querySelector('input'); focusSlot = -1; f.focus(); }
   }
   function renderPalette() {
     const el = $('palette'); el.innerHTML = '';
@@ -401,7 +487,7 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       b.title = `${p.label} ${p.name} (${p.size}칸) 지정`;
       b.addEventListener('click', () => {
         snap(); S.hand[S.sel] = { p: i, rot: 0, flip: 0 };
-        const nx = [1, 2, 0].map(d => (S.sel + d) % 3).find(s => !S.hand[s]);
+        const nx = nextEmpty(S.sel);
         if (nx !== undefined) S.sel = nx;
         changed();
       });
@@ -411,16 +497,20 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   function renderStats() {
     $('i-score').value = S.score; $('i-lines').value = S.lines; $('i-next').value = S.toNext; $('i-dot').value = S.dot; $('i-reroll').value = S.reroll;
     $('stageTxt').textContent = stageName(S.lines) + (S.dot + S.reroll >= 7 ? ' · 능력 최대' : '');
+    $('stageBadge').textContent = stageName(S.lines) + ' / 5';
   }
   const MODE_HINT = {
     paint: '칸을 누르거나 끌어서 채움/비움을 바꿉니다',
+    erase: '누르거나 끌어서 블록과 아이콘을 함께 지웁니다',
+    iconx: '아이콘만 지웁니다 (블록은 그대로)',
     place: '선택한 슬롯 조각을 직접 놓습니다 · 우클릭으로 회전',
     icon0: '점찍기 아이콘 위치를 누르세요 (최대 3개, 초과 시 오래된 것부터 사라짐)',
     icon1: '바꿔뽑기 아이콘 위치를 누르세요 (최대 3개)',
     dot: '점찍기로 채울 빈 칸을 누르세요',
   };
+  const MODES = ['paint', 'erase', 'icon0', 'icon1', 'iconx', 'place', 'dot'];
   function setMode(m) {
-    S.mode = m; ['paint', 'place', 'icon0', 'icon1', 'dot'].forEach(k => $('m-' + k).setAttribute('aria-pressed', k === m));
+    S.mode = m; MODES.forEach(k => $('m-' + k).setAttribute('aria-pressed', k === m));
     $('modeHint').textContent = MODE_HINT[m]; hover = null; render();
   }
 
@@ -434,11 +524,21 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   board.addEventListener('pointerdown', e => {
     if (e.button === 2) return;
     const c = cellFromEvent(e); if (!c) return;
+    focusCell(c.x, c.y, false);
+    if ((S.mode === 'paint' || S.mode === 'erase') && e.pointerType !== 'mouse') e.preventDefault();
+    if (S.mode === 'paint' || S.mode === 'erase') { clearRecView(); snap(); painting = S.mode === 'erase' ? false : !((S.rows[c.y] >> c.x) & 1); paintCell(c); board.setPointerCapture(e.pointerId); return; }
+    applyTool(c);
+  });
+  // 클릭·Space 공용: 현재 도구를 한 칸에 적용
+  function applyTool(c) {
     clearRecView();
     const bit = 1 << c.x;
-    if (S.mode === 'paint') {
-      snap(); painting = !((S.rows[c.y] >> c.x) & 1);
-      paintCell(c); board.setPointerCapture(e.pointerId);
+    if (S.mode === 'paint' || S.mode === 'erase') {
+      snap(); painting = S.mode === 'erase' ? false : !((S.rows[c.y] >> c.x) & 1); paintCell(c); painting = null; changed();
+    } else if (S.mode === 'iconx') {
+      const at = S.icons.findIndex(i => i.x === c.x && i.y === c.y);
+      if (at < 0) return toast('그 칸에는 아이콘이 없습니다');
+      snap(); S.icons.splice(at, 1); changed();
     } else if (S.mode === 'icon0' || S.mode === 'icon1') {
       snap(); const t = S.mode === 'icon0' ? 0 : 1;
       const at = S.icons.findIndex(i => i.x === c.x && i.y === c.y);
@@ -456,15 +556,27 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
       if (ox < 0 || oy < 0 || ox + v.w > W || oy + v.h > H || !C.fits(S.rows, v, ox, oy)) return toast('그 위치에는 놓을 수 없습니다');
       snap(); doPlace(S.sel, vi, ox, oy); changed();
     }
-  });
+  }
   function paintCell(c) {
     const i = c.y * W + c.x;
     if (painting) { S.rows[c.y] |= 1 << c.x; S.colors[i] = 5; } else { S.rows[c.y] &= ~(1 << c.x); S.colors[i] = 0; }
+    if (S.mode === 'erase') S.icons = S.icons.filter(ic => ic.x !== c.x || ic.y !== c.y);
     render();
   }
+  // 키보드: 방향키로 칸 이동, Space/Enter로 도구 적용
+  function focusCell(x, y, focus = true) {
+    cells[kf.y * W + kf.x].tabIndex = -1; kf = { x, y }; const d = cells[y * W + x]; d.tabIndex = 0;
+    if (focus) d.focus();
+    if (S.mode === 'place') { hover = { x, y }; render(); }
+  }
+  board.addEventListener('keydown', e => {
+    const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (mv) { e.preventDefault(); focusCell(Math.max(0, Math.min(W - 1, kf.x + mv[0])), Math.max(0, Math.min(H - 1, kf.y + mv[1]))); return; }
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); applyTool({ x: kf.x, y: kf.y }); }
+  });
   board.addEventListener('pointermove', e => {
     const c = cellFromEvent(e);
-    if (painting !== null && c) { const f = (S.rows[c.y] >> c.x) & 1; if (!!f !== painting) paintCell(c); return; }
+    if (painting !== null && c) { const f = (S.rows[c.y] >> c.x) & 1, ic = S.mode === 'erase' && S.icons.some(i => i.x === c.x && i.y === c.y); if (!!f !== painting || ic) paintCell(c); return; }
     if (S.mode === 'place') { if (!c || !hover || c.x !== hover.x || c.y !== hover.y) { hover = c; render(); } }
   });
   const endPaint = () => { if (painting !== null) { painting = null; changed(true); } };
@@ -518,19 +630,21 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   });
   bindNum('i-score', 'score', 0, 500000); bindNum('i-lines', 'lines', 0, 99999); bindNum('i-next', 'toNext', 1, 7);
   bindNum('i-dot', 'dot', 0, 7); bindNum('i-reroll', 'reroll', 0, 7);
-  ['paint', 'place', 'icon0', 'icon1', 'dot'].forEach(k => $('m-' + k).addEventListener('click', () => setMode(k)));
+  MODES.forEach(k => $('m-' + k).addEventListener('click', () => setMode(k)));
   $('undo').addEventListener('click', undo);
   $('clearBoard').addEventListener('click', () => { snap(); S.rows.fill(0); S.colors.fill(0); S.icons = []; changed(); });
   $('newGame').addEventListener('click', () => {
     snap(); S.rows.fill(0); S.colors.fill(0); Object.assign(S, { icons: [], score: 0, lines: 0, dot: 0, reroll: 0, toNext: 7, hand: [null, null, null], sel: 0 });
-    changed();
+    setMode('paint'); focusSlot = 0; changed(); toast('판·조각·점수·줄 수·능력을 모두 초기화했습니다 · 되돌리기로 복원');
   });
   $('s-grav').addEventListener('change', e => { S.gravity = e.target.value === '1'; changed(); });
   $('s-ratio').addEventListener('change', e => { let v = Math.max(0.05, Math.min(1, +e.target.value || 0.6)); e.target.value = v; C.setFinalRatio(v); changed(); });
-  ['s-time', 's-depth', 's-beam', 's-workers'].forEach(id => $(id).addEventListener('change', () => changed()));
+  ['s-time', 's-lbeam', 's-beam', 's-workers'].forEach(id => $(id).addEventListener('change', () => changed()));
   try { $('s-workers').value = Math.max(1, Math.min(8, (navigator.hardwareConcurrency || 3) - 1)); } catch (e) {}
 
   // ---------- AI ----------
+  // 1) 후보 수순: 빔 탐색 상위 결과판 8개 + 첫 수가 다른 수순들(최대 12개)
+  // 2) 순위: 한 손 앞보기. 다음 손패 3개를 확률대로 뽑아(모든 후보에 같은 표본) 각 후보 뒤에서 최선 수순의 평가값을 평균
   const coreSrc = document.getElementById('core').textContent;
   const weightsSrc = document.getElementById('weights').textContent;
   const ntvSrc = document.getElementById('ntv').textContent;
@@ -539,14 +653,22 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
   const workerSrc = coreSrc + '\n' + ntvSrc + '\n' + weightsSrc + '\n' + `
     const C = self.MoaCore;
     function toState(o){ const st=C.newState(); Object.assign(st,o); st.rows=Int32Array.from(o.rows); st.icons=o.icons.map(i=>({...i})); st.hand=o.hand.slice(); return st; }
-    function key(rows){ return Array.prototype.join.call(rows,','); }
+    function bkey(n){ return Array.prototype.join.call(n.rows,',')+'|'+n.dot+'|'+n.reroll; }
+    let vf = null, vfKey = null;
     self.onmessage = (e) => {
       const m = e.data; C.setFinalRatio(m.ratio);
-      const vf = m.nt ? self.MoaNTV.makeVF(m.nt, C.WEIGHTS) : null;
+      if (m.nt && vfKey !== m.nt) { vf = self.MoaNTV.makeVF(m.nt, C.WEIGHTS); vfKey = m.nt; }
       if (m.type === 'plan') {
         const st = toState(m.state);
-        const res = C.diversePlans(st, { beam: m.beam, vf }, 8);
-        const out = res.plans.map(n => ({ steps: n.steps, gain: n.gain, v: n.v }));
+        const top = C.plan(st, { beam: m.beam, finalK: m.beam * 2, vf });
+        const div = C.diversePlans(st, { beam: m.beam, vf }, 8);
+        const seen = new Set(), out = [];
+        const add = n => { const after = C.cloneState(st); for (const s of n.steps) C.applyStep(after, s);
+          const k = bkey(after); if (seen.has(k)) return; seen.add(k);
+          out.push({ steps: n.steps, gain: n.gain, v: n.v, after: { rows: Array.from(after.rows), icons: after.icons, dot: after.dot, reroll: after.reroll, lines: after.lines, gravity: st.gravity } }); };
+        for (const n of top.plans) { if (out.length >= 8) break; add(n); }
+        for (const n of div.plans) { if (out.length >= 12) break; add(n); }
+        out.sort((a, b) => b.v - a.v);
         let advice = null;
         if (st.reroll > 0) {
           const base = C.plan(st, { beam: 6, finalK: 12, vf }); const bv = base.plans.length ? base.plans[0].v : -1e6;
@@ -562,94 +684,105 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
           }
           advice = best;
         }
-        self.postMessage({ type: 'plan', id: m.id, complete: res.complete, depth: res.depth, need: res.need, plans: out, advice });
-      } else if (m.type === 'roll') {
-        const base = toState(m.state); let seed = m.seed;
-        const stats = m.cands.map(() => ({ n: 0, sum: 0, sq: 0, alive: 0, score: 0 }));
-        const t0 = Date.now(); let last = t0, i = 0;
-        const opts = { beam: 2, finalK: 4, vf };
+        self.postMessage({ type: 'plan', id: m.id, complete: top.complete, depth: top.depth, need: top.need, plans: out, advice });
+      } else if (m.type === 'look') {
+        const R = C.rng(m.seed), stats = m.cands.map(() => ({ n: 0, sum: 0, sq: 0, ok: 0 }));
+        const afters = m.cands.map(c => toState(Object.assign({ hand: [-1, -1, -1], score: 0, counter: 0 }, c.after)));
+        const o2 = { beam: m.lbeam, finalK: m.lbeam * 2, vf };
+        const t0 = Date.now(); let last = t0;
         while (Date.now() - t0 < m.ms) {
-          const ci = i++ % m.cands.length, R = C.rng(seed++);
-          const st = C.cloneState(base);
-          C.applyPlan(st, m.cands[ci], R);
-          const r = C.simulate(st, R, opts, m.hands);
-          const val = (r.score - base.score) + (r.alive ? 0 : -m.deathPen);
-          const s = stats[ci]; s.n++; s.sum += val; s.sq += val * val; if (r.alive) s.alive++; s.score += r.score - base.score;
+          const hand = [C.drawPiece(m.lines, R), C.drawPiece(m.lines, R), C.drawPiece(m.lines, R)];
+          for (let i = 0; i < afters.length; i++) {
+            const a = afters[i]; a.hand = hand.slice();
+            const r = C.plan(a, o2);
+            const val = m.cands[i].gain + (r.plans.length ? r.plans[0].v : (vf ? vf.full(a) : C.fullEval(a, C.WEIGHTS)) - 15000);
+            const s = stats[i]; s.n++; s.sum += val; s.sq += val * val; if (r.complete) s.ok++;
+          }
           const now = Date.now(); if (now - last > 300) { last = now; self.postMessage({ type: 'prog', id: m.id, wid: m.wid, stats }); }
         }
         self.postMessage({ type: 'prog', id: m.id, wid: m.wid, stats, done: true });
       }
     };`;
   const workerURL = URL.createObjectURL(new Blob([workerSrc], { type: 'text/javascript' }));
+  let userPicked = false, showAll = false;
+  $('moreRecs').addEventListener('click', () => { showAll = !showAll; renderRecs(); });
   let workers = [], runId = 0, recs = [], recStats = [], perWorker = {}, simStart = 0, simMs = 0, planRes = null;
   let totalSims = 0; try { totalSims = +localStorage.getItem('moa-total') || 0; } catch (e) {}
   function killWorkers() { workers.forEach(w => w.terminate()); workers = []; }
+  const zeroStat = () => ({ n: 0, sum: 0, sq: 0, ok: 0 });
   function settings() {
-    return { ms: Math.max(2, +$('s-time').value || 10) * 1000, hands: Math.max(1, +$('s-depth').value || 8), beam: Math.max(4, +$('s-beam').value || 24),
+    return { ms: Math.max(2, +$('s-time').value || 8) * 1000, lbeam: Math.max(2, +$('s-lbeam').value || 4), beam: Math.max(4, +$('s-beam').value || 24),
       ratio: +$('s-ratio').value || 0.6, nw: Math.max(1, +$('s-workers').value || 2) };
   }
+  function plainState(st) { return { rows: Array.from(st.rows), icons: st.icons, lines: st.lines, score: st.score, dot: st.dot, reroll: st.reroll, counter: st.counter, gravity: st.gravity, hand: st.hand }; }
   function analyze() {
-    killWorkers(); runId++; recs = []; recStats = []; perWorker = {}; planRes = null; clearRecView(false);
+    killWorkers(); runId++; recs = []; recStats = []; perWorker = {}; planRes = null; clearRecView(false); userPicked = false;
     const st = coreState();
     if (st.hand.every(h => h < 0)) {
       $('prog').textContent = '새 조각 3개를 지정하면 수읽기를 시작합니다';
-      $('advice').innerHTML = ''; $('recs').innerHTML = `<div class="empty-note">조각 목록에서 게임에 나온 블록 3개를 고르세요</div>`; $('barFill').style.width = '0';
+      $('advice').innerHTML = ''; $('recs').innerHTML = `<div class="empty-note">게임에 나온 블록 3개를 손패 슬롯에 입력하세요</div>`; $('barFill').style.width = '0';
+      $('detail').hidden = true; setPreview();
       return;
     }
     const cfg = settings(), id = runId;
-    $('prog').textContent = '후보 수 탐색 중…'; $('barFill').style.width = '4%';
+    $('prog').textContent = '후보 수순 탐색 중…'; $('barFill').style.width = '4%';
     const w = new Worker(workerURL); workers.push(w);
-    const plain = { rows: Array.from(st.rows), icons: st.icons, lines: st.lines, score: st.score, dot: st.dot, reroll: st.reroll, counter: st.counter, gravity: st.gravity, hand: st.hand };
     w.onmessage = e => {
       const m = e.data; if (m.id !== runId) return;
       w.terminate(); workers = workers.filter(x => x !== w);
-      planRes = m; recs = m.plans; recStats = recs.map(() => ({ n: 0, sum: 0, sq: 0, alive: 0, score: 0 }));
-      renderAdvice(); renderRecs();
-      if (recs.length) { recView = { idx: 0, step: defStep(recs[0]) }; render(); startRollouts(plain, cfg, id); }
+      planRes = m; recs = m.plans; recStats = recs.map(zeroStat);
+      renderAdvice();
+      if (recs.length) recView = { idx: 0, step: -1 };
+      renderRecs(); render();
+      if (recs.length > 1 && m.complete) startLook(cfg, id, false);
+      else { $('barFill').style.width = '100%'; $('prog').textContent = recs.length ? '완료 · 손패를 다 놓을 수 없어 탐색 평가값으로 순위를 매겼습니다' : '완료'; }
     };
-    w.postMessage({ type: 'plan', id, state: plain, beam: cfg.beam, ratio: cfg.ratio, nt: ntMsg() });
+    w.postMessage({ type: 'plan', id, state: plainState(st), beam: cfg.beam, ratio: cfg.ratio, nt: ntMsg() });
   }
-  function startRollouts(plain, cfg, id) {
-    perWorker = {}; simStart = Date.now(); simMs = cfg.ms;
-    const cands = recs.map(r => ({ steps: r.steps }));
+  // 앞보기 표본 평가. more=true면 기존 통계에 더함
+  function startLook(cfg, id, more) {
+    const prev = more ? recStats.map(s => ({ ...s })) : null;
+    perWorker = more ? { base: prev } : {}; simStart = Date.now(); simMs = cfg.ms;
+    const cands = recs.map(r => ({ gain: r.gain, after: r.after }));
     for (let k = 0; k < cfg.nw; k++) {
       const w = new Worker(workerURL); workers.push(w);
       w.onmessage = e => {
         const m = e.data; if (m.id !== runId) return;
-        perWorker[m.wid] = m.stats; aggregate();
-        if (m.done) { w.terminate(); workers = workers.filter(x => x !== w); if (!workers.length) finish(); }
+        perWorker['w' + m.wid] = m.stats; aggregate();
+        if (m.done) { w.terminate(); workers = workers.filter(x => x !== w); if (!workers.length) finish(prev); }
       };
-      w.postMessage({ type: 'roll', id, wid: k, state: plain, cands, ms: cfg.ms, hands: cfg.hands, deathPen: 3000, ratio: cfg.ratio, nt: ntMsg(), seed: (Math.random() * 1e9) | 0 });
+      w.postMessage({ type: 'look', id, wid: k, cands, lines: S.lines, lbeam: cfg.lbeam, ms: cfg.ms, ratio: cfg.ratio, nt: ntMsg(), seed: (Math.random() * 1e9) | 0 });
     }
     tick();
   }
-  let lastCount = 0;
   function aggregate() {
     recStats = recs.map((_, i) => {
-      const a = { n: 0, sum: 0, sq: 0, alive: 0, score: 0 };
-      for (const k in perWorker) { const s = perWorker[k][i]; a.n += s.n; a.sum += s.sum; a.sq += s.sq; a.alive += s.alive; a.score += s.score; }
+      const a = zeroStat();
+      for (const k in perWorker) { const s = perWorker[k][i]; a.n += s.n; a.sum += s.sum; a.sq += s.sq; a.ok += s.ok; }
       return a;
     });
     renderRecs();
   }
+  const samples = () => recStats.length ? recStats[0].n : 0;
   function tick() {
     if (!workers.length) return;
-    const el = Date.now() - simStart, n = recStats.reduce((a, s) => a + s.n, 0);
+    const el = Date.now() - simStart;
     $('barFill').style.width = Math.min(100, 4 + 96 * el / simMs) + '%';
-    $('prog').textContent = `시뮬레이션 ${fmt(n)}판 · 후보 ${recs.length}개 · ${(el / 1000).toFixed(1)}초 / ${(simMs / 1000) | 0}초 · 누적 ${fmt(totalSims + n)}판`;
+    $('prog').textContent = `다음 손패 표본 ${fmt(samples())}개 × 후보 ${recs.length}개 · ${(el / 1000).toFixed(1)}초 / ${(simMs / 1000) | 0}초`;
     setTimeout(tick, 200);
   }
-  function finish() {
-    const n = recStats.reduce((a, s) => a + s.n, 0);
-    totalSims += n; try { localStorage.setItem('moa-total', String(totalSims)); } catch (e) {}
+  function finish(prev) {
+    const n = samples() - (prev && prev.length ? prev[0].n : 0);
+    totalSims += n * recs.length; try { localStorage.setItem('moa-total', String(totalSims)); } catch (e) {}
     $('barFill').style.width = '100%';
-    $('prog').textContent = `완료 · 이번 수읽기 ${fmt(n)}판 · 누적 ${fmt(totalSims)}판`;
+    $('prog').textContent = `완료 · 다음 손패 표본 ${fmt(samples())}개로 후보 ${recs.length}개 비교 · 누적 ${fmt(totalSims)}회 평가`;
   }
   function score(i) {
     const s = recStats[i];
-    if (!s || s.n < 4) return recs[i].v - 1e7; // 롤아웃 전에는 휴리스틱 순
+    if (!s || s.n < 4) return recs[i].v - 1e9; // 표본 전에는 탐색 평가값 순
     return s.sum / s.n;
   }
+  function rankOrder() { return recs.map((_, i) => i).sort((a, b) => score(b) - score(a)); }
   function renderAdvice() {
     const el = $('advice'); el.innerHTML = '';
     if (!planRes) return;
@@ -659,44 +792,74 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
     }
     if (m.advice && S.reroll > 0) {
       const d = m.advice.ev - m.advice.base, p = S.hand[m.advice.slot];
-      if (d > 120 || !m.complete) parts.push(`<div class="advice warn">바꿔뽑기 권장: <b>${m.advice.slot + 1}번 슬롯 (${P[p.p].name})</b> · 평가값 기대 +${fmt(d)}. 사용 후 새 조각을 지정하면 다시 계산합니다.</div>`);
+      if (d > 120 || !m.complete) parts.push(`<div class="advice warn">바꿔뽑기 권장: <b>${m.advice.slot + 1}번 슬롯 (${P[p.p].name})</b> · 평가값 기대 +${fmt(d)}. 슬롯의 "바꿔뽑기 사용"을 누르고 새 조각을 입력하면 다시 계산합니다.</div>`);
       else parts.push(`<div class="advice info">바꿔뽑기는 아끼는 편이 낫습니다 (가장 나은 슬롯 기준 기대 ${d >= 0 ? '+' : ''}${fmt(d)}).</div>`);
     }
     el.innerHTML = parts.join('');
   }
   function stepHTML(s, i) {
-    if (s.type === 'dot') return `<span class="st"><span class="num">${i + 1}</span>점찍기 <span class="pos">${s.x + 1}열 ${s.y + 1}행</span>${s.cleared ? `<span class="cl">${s.cleared}줄</span>` : ''}</span>`;
+    if (s.type === 'dot') return `<span class="st"><span class="num">${i + 1}</span>점찍기 <span class="pos">(${s.x + 1}, ${s.y + 1})</span>${s.cleared ? `<span class="cl">${s.cleared}줄</span>` : ''}</span>`;
     const p = P[s.piece], v = p.variants[s.v];
-    return `<span class="st"><span class="num">${i + 1}</span>${miniHTML(v.cells, colorOf(s.piece))}<b>${p.name}</b><span class="pos">${s.x + 1}열 ${s.y + 1}행</span>${s.cleared ? `<span class="cl">${s.cleared}줄</span>` : ''}</span>`;
+    return `<span class="st"><span class="num">${i + 1}</span>${miniHTML(v.cells, colorOf(s.piece))}<b>${p.name}</b><span class="pos">(${s.x + 1}, ${s.y + 1})</span>${s.cleared ? `<span class="cl">${s.cleared}줄</span>` : ''}</span>`;
+  }
+  // 수순을 글로: 슬롯·조각·좌표(열, 행)·방향
+  function orientText(s) {
+    const v = P[s.piece].variants[s.v];
+    if (P[s.piece].variants.length === 1) return '방향 무관';
+    return (v.flip ? '좌우반전 후 ' : '') + (v.rot ? `시계방향 ${v.rot * 90}°` : (v.flip ? '회전 없음' : '기본 방향'));
+  }
+  function stepText(s) {
+    if (s.type === 'dot') return `점찍기 → (${s.x + 1}열, ${s.y + 1}행)${s.cleared ? ` · ${s.cleared}줄 제거` : ''} · +${fmt(s.gain)}점`;
+    const p = P[s.piece];
+    return `${s.slot + 1}번 슬롯 <b>${p.name}</b> → 기준칸 (${s.x + 1}열, ${s.y + 1}행) · ${orientText(s)}${s.cleared ? ` · <b>${s.cleared}줄 제거</b>` : ''} · +${fmt(s.gain)}점`;
+  }
+  function renderDetail() {
+    const el = $('detail');
+    if (recView.idx < 0 || !recs[recView.idx]) { el.hidden = true; return; }
+    const r = recs[recView.idx], s = recStats[recView.idx];
+    el.hidden = false;
+    el.innerHTML = `<b>${rankOrder().indexOf(recView.idx) + 1}순위 수순</b> · 즉시 +${fmt(r.gain)}점${s && s.n >= 4 ? ` · 다음 손패 모두 놓을 확률 ${(s.ok / s.n * 100).toFixed(0)}%` : ''}
+      <ol>${r.steps.map(t => `<li>${stepText(t)}</li>`).join('')}</ol>
+      <div class="note">기준칸(점)은 조각을 감싸는 직사각형의 왼쪽 위 칸이며 조각의 빈 부분일 수도 있습니다. 방향은 조각 목록의 기본 모양 기준입니다. 판에 표시된 모양을 우선 확인하세요.</div>`;
   }
   function renderRecs() {
     const el = $('recs');
-    if (!recs.length) { el.innerHTML = planRes ? `<div class="empty-note">놓을 수 있는 자리가 없습니다</div>` : ''; $('recbar').hidden = true; return; }
-    const order = recs.map((_, i) => i).sort((a, b) => score(b) - score(a));
+    if (!recs.length) { $('moreRecs').hidden = true; el.innerHTML = planRes ? `<div class="empty-note">놓을 수 있는 자리가 없습니다</div>` : ''; $('recbar').hidden = true; $('applyRec').disabled = true; renderDetail(); setPreview(); return; }
+    const order = rankOrder(), best = order[0], bs = recStats[best];
+    if (!userPicked && recView.idx !== best) { recView = { idx: best, step: -1 }; render(); } // 직접 고르기 전에는 1순위를 따라감
+    const bestMean = bs && bs.n >= 4 ? bs.sum / bs.n : null;
     el.innerHTML = '';
-    order.forEach((i, rank) => {
-      const r = recs[i], s = recStats[i] || { n: 0 };
+    const shown = showAll ? order : order.filter((i, rank) => rank < 6 || i === recView.idx);
+    $('moreRecs').hidden = order.length <= 6; $('moreRecs').textContent = showAll ? '상위 6개만 보기' : `후보 ${order.length}개 모두 보기`;
+    shown.forEach(i => {
+      const rank = order.indexOf(i), r = recs[i], s = recStats[i] || zeroStat();
       const b = document.createElement('button'); b.className = 'rec'; b.setAttribute('aria-pressed', recView.idx === i);
       let val;
       if (s.n >= 4) {
-        const surv = s.alive / s.n, mean = s.sum / s.n, se = Math.sqrt(Math.max(0, s.sq / s.n - mean * mean) / s.n);
-        const sc = surv > .9 ? 'g' : surv > .7 ? 'w' : 'b';
-        val = `<b>${fmt(mean)}</b><span>±${fmt(se * 1.96)} · ${fmt(s.n)}판</span><span><span class="surv ${sc}">생존 ${(surv * 100).toFixed(0)}%</span></span>`;
-      } else val = `<b>${fmt(r.gain)}</b><span>즉시 점수</span><span>계산 대기</span>`;
+        const okp = s.ok / s.n, mean = s.sum / s.n, se = Math.sqrt(Math.max(0, s.sq / s.n - mean * mean) / s.n);
+        const sc = okp > .9 ? 'g' : okp > .7 ? 'w' : 'b';
+        val = `<b>${rank === 0 ? '최선' : '−' + fmt(bestMean - mean)}</b><span>±${fmt(se * 1.96)} · 표본 ${fmt(s.n)}</span><span><span class="surv ${sc}" title="다음 손패 3개를 모두 놓을 수 있었던 비율">다음 손 ${(okp * 100).toFixed(0)}%</span></span>`;
+      } else val = `<b>+${fmt(r.gain)}</b><span>즉시 점수</span><span>${planRes && !planRes.complete ? '탐색 평가 순' : '계산 대기'}</span>`;
       b.innerHTML = `<span class="rk">${rank + 1}</span><span class="seq">${r.steps.map(stepHTML).join('')}<span class="st" style="color:var(--muted)">즉시 +${fmt(r.gain)}</span></span><span class="val">${val}</span>`;
-      b.addEventListener('click', () => { recView = { idx: i, step: defStep(recs[i]) }; renderRecs(); render(); updateStepTxt(); });
+      b.addEventListener('click', () => { userPicked = true; recView = { idx: i, step: -1 }; renderRecs(); render(); });
       el.appendChild(b);
     });
     $('recbar').hidden = recView.idx < 0;
-    updateStepTxt();
+    $('applyRec').disabled = recView.idx < 0;
+    updateStepTxt(); renderDetail(); setPreview();
   }
-  function defStep() { return -1; }
+  function setPreview() {
+    const r = recView.idx >= 0 ? recs[recView.idx] : null;
+    if (r) { $('preview').innerHTML = `추천 ${rankOrder().indexOf(recView.idx) + 1}순위 · ` + r.steps.map((t, i) => `${i + 1}) ${t.type === 'dot' ? '점찍기' : P[t.piece].name} (${t.x + 1}, ${t.y + 1})`).join(' → '); return; }
+    const n = S.hand.filter(Boolean).length;
+    $('preview').textContent = n ? `현재 ${stageName(S.lines)} · 손패 ${n}개 · 계산이 끝나면 추천 수순이 판에 번호로 표시됩니다` : '손패 슬롯에 새 조각 3개를 입력하세요';
+  }
   function updateStepTxt() {
     if (recView.idx < 0) return;
     const n = recs[recView.idx].steps.length;
-    $('stepTxt').textContent = recView.step < 0 ? `전체 ${n}수 · 점선 줄은 수순 중 지워짐 · 사선 칸은 지운 뒤 다시 채움` : `${recView.step + 1}수째 두기 직전 (${n}수 중)`;
+    $('stepTxt').textContent = recView.step < 0 ? `전체 ${n}수 겹쳐 보기 · 점선 줄은 수순 중 지워짐 · 사선 칸은 지운 뒤 다시 채움` : `${recView.step + 1}수째 두기 직전 (${n}수 중)`;
   }
-  function clearRecView(r = true) { if (recView.idx >= 0) { recView = { idx: -1, step: -1 }; $('recbar').hidden = true; if (r) render(); } }
+  function clearRecView(r = true) { if (recView.idx >= 0) { recView = { idx: -1, step: -1 }; $('recbar').hidden = true; $('applyRec').disabled = true; $('detail').hidden = true; if (r) render(); } }
   $('stepNext').addEventListener('click', () => { if (recView.idx < 0) return; const n = recs[recView.idx].steps.length; recView.step = recView.step >= n - 1 ? -1 : recView.step + 1; render(); updateStepTxt(); });
   $('stepPrev').addEventListener('click', () => { if (recView.idx < 0) return; const n = recs[recView.idx].steps.length; recView.step = recView.step < 0 ? n - 1 : recView.step - 1; render(); updateStepTxt(); });
   $('applyRec').addEventListener('click', () => {
@@ -712,46 +875,58 @@ details.set summary { cursor: pointer; color: var(--muted); font-size: 13px; }
     }
     S.sel = Math.max(0, [0, 1, 2].findIndex(x => S.hand[x]));
     if (spawned) setMode('icon1');
-    toast(`수순 반영 +${fmt(total)}점` + (spawned ? ' · 능력 아이콘이 생겼다면 위치를 찍어주세요' : ' · 다음 조각 3개를 지정하세요'));
+    toast(`진행 +${fmt(total)}점` + (spawned ? ' · 새 능력 아이콘 위치를 판에 찍어 주세요' : ' · 새로 나온 조각 3개를 입력하세요'));
+    if (S.hand.every(h => !h) && !spawned) focusSlot = 0;
     changed();
   });
-  $('stopSim').addEventListener('click', () => { if (workers.length) { killWorkers(); finish(); } });
+  $('stopSim').addEventListener('click', () => { if (workers.length) { killWorkers(); finish(null); } });
   $('moreSim').addEventListener('click', () => {
-    if (!recs.length || workers.length) return;
-    const st = coreState(), cfg = settings();
-    const plain = { rows: Array.from(st.rows), icons: st.icons, lines: st.lines, score: st.score, dot: st.dot, reroll: st.reroll, counter: st.counter, gravity: st.gravity, hand: st.hand };
-    // 기존 통계 유지: 새 워커 결과를 더함
-    const prev = recStats.map(s => ({ ...s })); const id = runId;
-    perWorker = { base: prev }; simStart = Date.now(); simMs = cfg.ms;
-    const cands = recs.map(r => ({ steps: r.steps }));
-    for (let k = 0; k < cfg.nw; k++) {
-      const w = new Worker(workerURL); workers.push(w);
-      w.onmessage = e => { const m = e.data; if (m.id !== runId) return; perWorker['w' + m.wid] = m.stats; aggregate(); if (m.done) { w.terminate(); workers = workers.filter(x => x !== w); if (!workers.length) finish2(prev); } };
-      w.postMessage({ type: 'roll', id, wid: k, state: plain, cands, ms: cfg.ms, hands: cfg.hands, deathPen: 3000, ratio: cfg.ratio, nt: ntMsg(), seed: (Math.random() * 1e9) | 0 });
-    }
-    tick();
+    if (recs.length < 2 || workers.length || !planRes || !planRes.complete) return;
+    startLook(settings(), runId, true);
   });
-  function finish2(prev) {
-    const n = recStats.reduce((a, s) => a + s.n, 0) - prev.reduce((a, s) => a + s.n, 0);
-    totalSims += n; try { localStorage.setItem('moa-total', String(totalSims)); } catch (e) {}
-    $('barFill').style.width = '100%';
-    $('prog').textContent = `완료 · 추가 ${fmt(n)}판 · 후보별 합계 ${fmt(recStats.reduce((a, s) => a + s.n, 0))}판 · 누적 ${fmt(totalSims)}판`;
+
+  // ---------- 자동 저장 ----------
+  const SKEY = 'moa-state-v1';
+  function save() {
+    try { localStorage.setItem(SKEY, JSON.stringify({ rows: Array.from(S.rows), colors: Array.from(S.colors), icons: S.icons, score: S.score, lines: S.lines, dot: S.dot, reroll: S.reroll, toNext: S.toNext, hand: S.hand, sel: S.sel, gravity: S.gravity,
+      set: ['s-time', 's-lbeam', 's-beam', 's-ratio', 's-grav', 's-workers'].reduce((o, k) => (o[k] = $(k).value, o), {}) })); } catch (e) {}
   }
+  function restore() {
+    try {
+      const o = JSON.parse(localStorage.getItem(SKEY)); if (!o || !o.rows || o.rows.length !== H) return false;
+      S.rows = Int32Array.from(o.rows); S.colors = Uint8Array.from(o.colors);
+      Object.assign(S, { icons: o.icons || [], score: o.score | 0, lines: o.lines | 0, dot: o.dot | 0, reroll: o.reroll | 0, toNext: o.toNext || 7, hand: (o.hand || [null, null, null]).map(h => h && P[h.p] ? h : null), sel: o.sel | 0, gravity: !!o.gravity });
+      if (o.set) for (const k in o.set) if ($(k)) $(k).value = o.set[k];
+      C.setFinalRatio(+$('s-ratio').value || 0.6);
+      return true;
+    } catch (e) { return false; }
+  }
+  document.addEventListener('keydown', e => {
+    if (e.isComposing || e.altKey) return;
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'z' || e.key === 'Z')) { if (!/INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) { e.preventDefault(); undo(); } return; }
+    if (e.ctrlKey || e.metaKey || /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+    if (['1', '2', '3'].includes(e.key)) { e.preventDefault(); S.sel = +e.key - 1; focusSlot = S.sel; renderHand(); render(); return; }
+    const h = S.hand[S.sel];
+    if ((e.key === 'r' || e.key === 'R') && h) { h.rot = (h.rot + 1) % 4; renderHand(); render(); return; }
+    if ((e.key === 'f' || e.key === 'F') && h) { h.flip ^= 1; h.rot = (4 - h.rot) % 4; renderHand(); render(); return; }
+    const m = { b: 'paint', e: 'erase', d: 'icon0', s: 'icon1', p: 'place' }[e.key.toLowerCase()];
+    if (m) setMode(m);
+  });
 
   // ---------- 공통 ----------
   let tmr = 0, debounce = 0;
   function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(tmr); tmr = setTimeout(() => el.classList.remove('on'), 2600); }
   function changed() {
     clearRecView(false);
-    renderHand(); renderPalette(); renderStats(); render();
-    const n = S.hand.filter(Boolean).length;
-    $('hint').innerHTML = n ? `현재 ${stageName(S.lines)} · 손패 ${n}개 · 추천 수를 누르면 판에 수순 번호가 표시됩니다` : '<b>새 조각 3개</b>를 지정하세요';
+    renderHand(); renderPalette(); renderStats(); render(); save();
+    setPreview();
     clearTimeout(debounce); debounce = setTimeout(analyze, 300);
   }
   const T = window.MOA_TRAIN || {};
   $('foot').innerHTML = `<b>점수 규칙</b> 배치 칸수 + 동시 제거 n줄당 300×n² (1줄 300 · 2줄 1,200 · 3줄 2,700 · 4줄 4,800 · 5줄 7,500) + 능력 획득 50점, 한 판 최대 500,000점. ` +
     `<b>조각 확률</b>은 공식 수치가 공개되지 않아 1단계 균등, 단계가 오를수록 칸수가 적은 조각이 덜 나오도록 가정했습니다(계산 설정에서 비율 조정). ` +
-    `<b>평가</b>는 판 모양 패턴표(행 쌍·3×4·4×3 창) 가치 함수를 TD 자가대국 ${fmt(T.td || 0)}판으로 학습했고, 기존 평가식 가중치는 자가대국 ${fmt(T.games || 0)}판으로 맞췄습니다. ${T.bench ? T.bench + ' ' : ''}추천 순위는 각 후보 수순 뒤 무작위 미래 조각으로 설정한 깊이만큼 실제로 두어 본 평균 점수입니다(도중 게임 오버 시 −3,000). 능력 아이콘이 생기는 위치는 무작위라 실제 게임 화면을 보고 직접 찍어 주세요.`;
-  setMode('paint'); loadSample(); changed();
+    `<b>평가</b>는 판 모양 패턴표(행 쌍·3×4·4×3·4×4·2×5·5×2 창) 가치 함수를 TD 자가대국 ${fmt(T.td || 0)}판으로 학습했고, 기존 평가식 가중치는 자가대국 ${fmt(T.games || 0)}판으로 맞췄습니다. ${T.bench ? T.bench + ' ' : ''}추천 순위는 <b>한 손 앞보기</b>로 매깁니다. 다음 손패 3개를 등장 확률대로 계속 뽑아(모든 후보에 같은 표본) 각 후보 수순 뒤에서 최선으로 둔 평가값의 평균을 비교합니다. "다음 손"은 뽑은 손패를 모두 놓을 수 있었던 비율입니다. 능력 아이콘이 생기는 위치는 무작위라 실제 게임 화면을 보고 직접 찍어 주세요.`;
+  $('sample').addEventListener('click', () => { snap(); loadSample(); changed(); toast('예시 판을 불러왔습니다 · 되돌리기로 이전 상태 복원'); });
+  setMode('paint'); if (!restore()) loadSample(); changed();
 })();
 </script>
